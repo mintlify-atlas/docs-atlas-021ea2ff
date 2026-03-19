@@ -48,11 +48,13 @@ The token issued at login contains:
   "id_sede": 1,
   "sede_nombre": "Principal",
   "permisos": {
-    "reservas": true,
-    "inventario": true,
-    "ventas": true,
+    "inventario_sede": true,
+    "inventario_general": false,
+    "ventas_sede": true,
+    "compras_sede": true,
+    "proveedores": false,
     "empleados": false,
-    "reportes": true
+    "torneos": true
   }
 }
 ```
@@ -63,8 +65,8 @@ The `permisos` object is read directly from the employee's role record in the `r
 
 Tokens expire after **8 hours**. After expiry:
 
-- API requests return `401 Unauthorized`
-- `authGuard.js` detects the 401 and redirects the user to `login.html`
+- API requests return `403 Forbidden` with error code `TOKEN_EXPIRED`
+- `authGuard.js` detects the 403 and redirects the user to `login.html`
 - The employee must log in again to receive a new token
 
 <Note>
@@ -101,10 +103,11 @@ The `sesion_logs` table records all authentication events:
 | Column | Description |
 |---|---|
 | `id_log` | Primary key |
-| `id_empleado` | Employee involved |
-| `evento` | Event type: `login`, `logout`, `login_fallido` |
-| `timestamp` | When the event occurred |
-| `ip` | Client IP address |
+| `id_empleado` | Employee involved (nullable for failed attempts before lookup) |
+| `accion` | Event type: `LOGIN`, `LOGOUT`, `FAILED_ATTEMPT` |
+| `ip_address` | Client IP address |
+| `user_agent` | Browser/client user-agent string |
+| `detalle` | Additional context (e.g., role on login, failure reason) |
 
 This log provides an audit trail for security reviews and helps identify unauthorized access attempts.
 

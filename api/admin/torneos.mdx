@@ -1,17 +1,17 @@
 ---
 title: 'Torneos (admin)'
-description: 'Retrieve all tournaments including inactive ones, with full details.'
+description: 'Manage tournaments: list, create, register participants, record results, and manage brackets.'
+---
+
+All tournament admin endpoints require authentication and the `torneos` permission. Employees without `all: true` only see tournaments for their assigned location.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header with `torneos` permission.</Note>
+
 ---
 
 ## GET /api/torneos
 
-Returns all tournaments in the system — both active and inactive — with full details. This is the admin equivalent of the public [GET /api/cliente/torneos](/api/cliente/torneos) endpoint, which returns only active tournaments.
-
-<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
-
-### Request
-
-No parameters or request body required.
+Returns tournaments for the authenticated employee's location. Administrators see all tournaments across all locations.
 
 ```bash
 curl --request GET \
@@ -19,49 +19,7 @@ curl --request GET \
   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-### Response
-
-**200 OK**
-
-<ResponseField name="success" type="boolean" required>
-  Always `true` on success.
-</ResponseField>
-
-<ResponseField name="data" type="array" required>
-  Array of all torneo objects, including inactive tournaments.
-
-  <Expandable title="torneo properties">
-    <ResponseField name="id_torneo" type="number" required>
-      Unique identifier for the tournament.
-    </ResponseField>
-    <ResponseField name="nombre" type="string" required>
-      Display name of the tournament.
-    </ResponseField>
-    <ResponseField name="fecha_inicio" type="string" required>
-      Tournament start date in `YYYY-MM-DD` format.
-    </ResponseField>
-    <ResponseField name="fecha_fin" type="string" required>
-      Tournament end date in `YYYY-MM-DD` format.
-    </ResponseField>
-    <ResponseField name="deporte" type="string" required>
-      Name of the sport for this tournament.
-    </ResponseField>
-    <ResponseField name="sede" type="string" required>
-      Name of the sede hosting this tournament.
-    </ResponseField>
-    <ResponseField name="activo" type="boolean" required>
-      Whether the tournament is currently active.
-    </ResponseField>
-  </Expandable>
-</ResponseField>
-
-### Error responses
-
-| Status | Condition |
-|---|---|
-| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
-
-### Example response
+**Response:**
 
 ```json
 {
@@ -75,16 +33,121 @@ curl --request GET \
       "deporte": "Pádel",
       "sede": "Sede Principal",
       "activo": true
-    },
-    {
-      "id_torneo": 2,
-      "nombre": "Torneo Otoño 2025",
-      "fecha_inicio": "2025-04-01",
-      "fecha_fin": "2025-06-30",
-      "deporte": "Fútbol",
-      "sede": "Rincón",
-      "activo": false
     }
   ]
 }
 ```
+
+---
+
+## GET /api/torneos/ranking
+
+Returns the overall ranking across all tournaments. Requires `torneos` permission.
+
+---
+
+## POST /api/torneos
+
+Creates a new tournament.
+
+### Request body
+
+<ParamField body="nombre" type="string" required>
+  Tournament name.
+</ParamField>
+
+<ParamField body="id_sede" type="number" required>
+  ID of the hosting location.
+</ParamField>
+
+<ParamField body="id_deporte" type="number" required>
+  ID of the sport for this tournament.
+</ParamField>
+
+<ParamField body="fecha_inicio" type="string" required>
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField body="fecha_fin" type="string" required>
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+---
+
+## GET /api/torneos/:idTorneo/participantes-inscritos
+
+Returns the list of participants registered for a tournament.
+
+<ParamField path="idTorneo" type="number" required>
+  Tournament ID.
+</ParamField>
+
+---
+
+## POST /api/torneos/:idTorneo/participantes
+
+Registers participants in a tournament.
+
+<ParamField path="idTorneo" type="number" required>
+  Tournament ID.
+</ParamField>
+
+---
+
+## GET /api/torneos/:idTorneo/partidos
+
+Returns all matches (bracket) for a tournament.
+
+<ParamField path="idTorneo" type="number" required>
+  Tournament ID.
+</ParamField>
+
+---
+
+## GET /api/torneos/:idTorneo/ganador
+
+Returns the winner of a completed tournament.
+
+<ParamField path="idTorneo" type="number" required>
+  Tournament ID.
+</ParamField>
+
+---
+
+## POST /api/torneos/:idTorneo/cerrar-inscripcion
+
+Closes registration and generates the tournament bracket (match schedule).
+
+<ParamField path="idTorneo" type="number" required>
+  Tournament ID.
+</ParamField>
+
+---
+
+## POST /api/torneos/:idTorneo/cancelar
+
+Cancels a tournament.
+
+<ParamField path="idTorneo" type="number" required>
+  Tournament ID.
+</ParamField>
+
+---
+
+## POST /api/torneos/partidos/:idPartido/resultado
+
+Records the result of a match, advancing the winning participant in the bracket.
+
+<ParamField path="idPartido" type="number" required>
+  Match ID.
+</ParamField>
+
+---
+
+## Error responses
+
+| Status | Condition |
+|---|---|
+| `401 Unauthorized` | Token is missing or employee is inactive. |
+| `403 Forbidden` | Token expired/invalid, or missing `torneos` permission, or sede scope denied. |
+| `500 Internal Server Error` | Database error. |

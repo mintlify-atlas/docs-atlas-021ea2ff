@@ -17,10 +17,11 @@ A successful response returns HTTP `200` with a JSON body. Any other response in
 
     **1. Check that `.env` exists and has all required variables.**
 
-    The backend exits on startup if `DATABASE_URL`, `JWT_SECRET`, or `NODE_ENV` are missing. Confirm the file is in the project root (not inside `backend/`):
+    The backend exits on startup if `DATABASE_URL`, `JWT_SECRET`, or `NODE_ENV` are missing. The `.env` file must be inside the `backend/` directory:
 
     ```bash
-    ls -la .env
+    ls -la backend/.env
+    cat backend/.env
     ```
 
     **2. Reinstall dependencies.**

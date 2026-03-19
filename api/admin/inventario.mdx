@@ -1,9 +1,12 @@
 ---
 title: 'Inventario'
-description: 'Retrieve product stock levels for each TANCAT location.'
+description: 'Manage product inventory across TANCAT locations with role-scoped access.'
 ---
 
-The inventory API provides separate endpoints for each physical location. All three require authentication.
+The inventory API provides endpoints for each physical location. Access is controlled by two permission levels:
+
+- `inventario_sede` — read access, scoped to the employee's assigned location
+- `inventario_general` — write access (create, update, delete), available to administrators only
 
 <Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
 
@@ -11,11 +14,7 @@ The inventory API provides separate endpoints for each physical location. All th
 
 ## GET /api/inventario
 
-Returns the product inventory for the main (Sede Principal) location, including stock levels for all products.
-
-### Request
-
-No parameters or request body required.
+Returns products for the main location. Results are filtered to the employee's sede unless they have `all: true` (administrator) permission.
 
 ```bash
 curl --request GET \
@@ -23,31 +22,7 @@ curl --request GET \
   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-### Response
-
-**200 OK**
-
-<ResponseField name="success" type="boolean" required>
-  Always `true` on success.
-</ResponseField>
-
-<ResponseField name="data" type="array" required>
-  Array of product objects with current stock levels for the main location.
-
-  <Expandable title="product properties">
-    <ResponseField name="id_producto" type="number" required>
-      Unique product identifier.
-    </ResponseField>
-    <ResponseField name="nombre" type="string" required>
-      Product name.
-    </ResponseField>
-    <ResponseField name="stock" type="number" required>
-      Current stock quantity.
-    </ResponseField>
-  </Expandable>
-</ResponseField>
-
-### Example response
+**Response:**
 
 ```json
 {
@@ -56,12 +31,8 @@ curl --request GET \
     {
       "id_producto": 1,
       "nombre": "Pelota de Pádel",
-      "stock": 24
-    },
-    {
-      "id_producto": 2,
-      "nombre": "Red de Tenis",
-      "stock": 3
+      "stock": 24,
+      "id_sede": 1
     }
   ]
 }
@@ -69,13 +40,77 @@ curl --request GET \
 
 ---
 
+## GET /api/inventario/:id
+
+Returns the detail of a single product.
+
+<ParamField path="id" type="number" required>
+  Product ID.
+</ParamField>
+
+---
+
+## POST /api/inventario
+
+Creates a new product. Requires `inventario_general` permission (administrators only).
+
+---
+
+## PUT /api/inventario/:id
+
+Updates an existing product. Requires `inventario_general` permission.
+
+---
+
+## DELETE /api/inventario/:id
+
+Soft-deletes (deactivates) a product. Requires `inventario_general` permission.
+
+---
+
+## DELETE /api/inventario/:id/purgar
+
+Permanently removes a product. Requires `inventario_general` permission.
+
+<Warning>
+  This is a hard delete. The product and all associated data will be permanently removed and cannot be recovered.
+</Warning>
+
+---
+
+## GET /api/inventario/categorias/list
+
+Returns product categories. Requires `inventario_sede` permission.
+
+---
+
+## POST /api/inventario/categorias
+
+Creates a new product category. Requires `inventario_general` permission.
+
+---
+
+## GET /api/inventario/sedes/list
+
+Returns the list of sedes. Requires `inventario_sede` permission.
+
+---
+
+## GET /api/inventario/bajo-stock/list
+
+Returns products with stock below their minimum threshold. Requires `inventario_general` permission.
+
+---
+
+## GET /api/inventario/resumen/estadisticas
+
+Returns an inventory summary with totals and category breakdown. Requires `inventario_general` permission.
+
+---
+
 ## GET /api/inventario/rincon
 
-Returns the product inventory for the Rincón location.
-
-### Request
-
-No parameters or request body required.
+Returns inventory for the **Rincón** location. Only accessible to employees assigned to Rincón or administrators.
 
 ```bash
 curl --request GET \
@@ -83,19 +118,11 @@ curl --request GET \
   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-### Response
-
-Same structure as [GET /api/inventario](#get-apiinventario), filtered to the Rincón location's stock.
-
 ---
 
 ## GET /api/inventario/JacintoRios
 
-Returns the product inventory for the Jacinto Ríos location.
-
-### Request
-
-No parameters or request body required.
+Returns inventory for the **Jacinto Ríos** location. Only accessible to employees assigned to Jacinto Ríos or administrators.
 
 ```bash
 curl --request GET \
@@ -103,15 +130,12 @@ curl --request GET \
   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-### Response
-
-Same structure as [GET /api/inventario](#get-apiinventario), filtered to the Jacinto Ríos location's stock.
-
 ---
 
-### Error responses (all inventory endpoints)
+## Error responses
 
 | Status | Condition |
 |---|---|
-| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
-| `500 Internal Server Error` | Database query failed (`DATABASE_ERROR`). |
+| `401 Unauthorized` | Token is missing or employee is inactive. |
+| `403 Forbidden` | Token is expired/invalid, insufficient permissions, or attempting to access a sede you are not assigned to (`SEDE_ACCESS_DENIED`). |
+| `500 Internal Server Error` | Database error. |

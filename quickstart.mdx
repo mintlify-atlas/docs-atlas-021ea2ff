@@ -106,9 +106,12 @@ This guide walks you through cloning the repository, connecting a Neon PostgreSQ
 
     ```json
     {
-      "status": "ok",
-      "database": "connected",
-      "timestamp": "2026-03-19T00:00:00.000Z"
+      "status": "OK",
+      "timestamp": "2026-03-19T00:00:00.000Z",
+      "environment": "development",
+      "version": "1.0.0",
+      "database": "Connected",
+      "serverless": false
     }
     ```
 
@@ -132,7 +135,7 @@ This guide walks you through cloning the repository, connecting a Neon PostgreSQ
 
 ## Next steps
 
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card title="Architecture" icon="sitemap" href="/architecture">
     Understand how the backend, frontend, and database fit together.
   </Card>
@@ -142,7 +145,7 @@ This guide walks you through cloning the repository, connecting a Neon PostgreSQ
   <Card title="Database setup" icon="database" href="/configuration/database">
     Connection pooling, SSL, and table overview.
   </Card>
-  <Card title="Deploy to Vercel" icon="cloud" href="/configuration/deployment">
+  <Card title="Deploy to Vercel" icon="cloud" href="/operations/vercel">
     Deploy the monorepo to Vercel with the correct proxy configuration.
   </Card>
-</Columns>
+</CardGroup>

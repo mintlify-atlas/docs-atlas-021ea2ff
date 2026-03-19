@@ -14,11 +14,16 @@ Employee data is stored in the `empleados` table:
 | `id_empleado` | integer | Primary key |
 | `nombre` | string | First name |
 | `apellido` | string | Last name |
-| `email` | string | Login email (unique) |
-| `password` | string | bcrypt-hashed password |
+| `dni` | string | National ID number (unique, optional) |
+| `telefono` | string | Phone number |
+| `email` | string | Login email (unique, lowercase) |
+| `password_hash` | string | bcrypt-hashed password (12 rounds) |
 | `id_rol` | integer | FK to `roles` table |
 | `id_sede` | integer | FK to `sedes` — the employee's assigned location |
+| `salario` | numeric | Salary (optional) |
+| `fecha_ingreso` | date | Start date |
 | `activo` | boolean | Whether the employee can log in |
+| `fecha_creacion` | timestamp | Record creation timestamp |
 
 ## Managing employees
 
@@ -32,7 +37,7 @@ Employee management is available at `frontend/pages/empleados.html`.
     Edit an employee's name, email, role, or location assignment. Password changes are hashed on save.
   </Card>
   <Card title="Activate / deactivate" icon="toggle-on">
-    Toggle the `activo` flag to control login access. Deactivating an employee does not delete their record, preserving audit history.
+    Toggle the `activo` flag to control login access without deleting the record. Use this when an employee leaves but their history must be preserved (e.g., they have related reservations).
   </Card>
   <Card title="Role assignment" icon="shield">
     Assign or change the employee's role. The role determines which parts of the admin panel they can access and what actions they can perform.

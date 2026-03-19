@@ -1,11 +1,11 @@
 ---
 title: 'Dashboard'
-description: "Retrieve a summary of today's reservations, sales, active tournaments, and low stock alerts."
+description: "Retrieve today's operational summary including reservations, sales, court availability, and recent activity."
 ---
 
 ## GET /api/admin/dashboard
 
-Returns a summary of key operational metrics for the current day. This data powers the admin dashboard overview panel.
+Returns a full operational summary for the current day. This endpoint powers the main admin dashboard panel.
 
 <Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
 
@@ -29,16 +29,51 @@ curl --request GET \
 
 <ResponseField name="data" type="object" required>
   <Expandable title="properties" defaultOpen>
-    <ResponseField name="reservas_hoy" type="number" required>
-      Total number of reservations for today.
+    <ResponseField name="resumen" type="object" required>
+      Aggregate summary metrics for today.
+      <Expandable title="resumen properties" defaultOpen>
+        <ResponseField name="resumen.reservasHoy" type="number" required>
+          Total number of reservations for today.
+        </ResponseField>
+        <ResponseField name="resumen.clientesActivos" type="number" required>
+          Total number of active clients in the system.
+        </ResponseField>
+        <ResponseField name="resumen.ventasDelDia" type="number" required>
+          Total sales value for today (sum of `ventas.total`).
+        </ResponseField>
+        <ResponseField name="resumen.canchasDisponibles" type="number" required>
+          Number of courts not yet booked for today.
+        </ResponseField>
+      </Expandable>
     </ResponseField>
-    <ResponseField name="ventas_hoy" type="number" required>
-      Total sales value for today (in the system's currency unit).
+    <ResponseField name="reservasHoyDetalle" type="array" required>
+      List of today's reservations, each with client name, sede, sport, court number, and time slot.
     </ResponseField>
-    <ResponseField name="torneos_activos" type="number" required>
-      Number of currently active tournaments.
+    <ResponseField name="sedes" type="array" required>
+      Status of each location: total courts, occupied courts, and operating hours.
+    </ResponseField>
+    <ResponseField name="actividadReciente" type="array" required>
+      Up to 10 most recent events across reservations, sales, and new clients.
+      <Expandable title="activity item properties">
+        <ResponseField name="tipo" type="string">
+          Event type: `"reserva"`, `"venta"`, or `"cliente"`.
+        </ResponseField>
+        <ResponseField name="timestamp" type="string">
+          ISO 8601 timestamp when the event occurred.
+        </ResponseField>
+        <ResponseField name="descripcion" type="string">
+          Human-readable event description.
+        </ResponseField>
+        <ResponseField name="detalle" type="string">
+          Additional event detail (e.g., time slot range for reservations, payment method for sales).
+        </ResponseField>
+      </Expandable>
     </ResponseField>
   </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Always `"Dashboard obtenido correctamente"`.
 </ResponseField>
 
 ### Error responses
@@ -46,6 +81,7 @@ curl --request GET \
 | Status | Condition |
 |---|---|
 | `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
+| `500 Internal Server Error` | Database query failed. |
 
 ### Example response
 
@@ -53,9 +89,43 @@ curl --request GET \
 {
   "success": true,
   "data": {
-    "reservas_hoy": 12,
-    "ventas_hoy": 45000,
-    "torneos_activos": 2
-  }
+    "resumen": {
+      "reservasHoy": 12,
+      "clientesActivos": 348,
+      "ventasDelDia": 45000,
+      "canchasDisponibles": 4
+    },
+    "reservasHoyDetalle": [
+      {
+        "id_reserva": 101,
+        "fecha_reserva": "2026-03-19",
+        "estado": "confirmada",
+        "cliente_nombre": "María",
+        "cliente_apellido": "López",
+        "sede_nombre": "Principal",
+        "deporte_nombre": "Padel",
+        "cancha_numero": 2,
+        "hora_inicio": "09:00",
+        "hora_fin": "10:00"
+      }
+    ],
+    "sedes": [
+      {
+        "id_sede": 1,
+        "nombre": "Principal",
+        "canchas_totales": 6,
+        "canchas_ocupadas": 2
+      }
+    ],
+    "actividadReciente": [
+      {
+        "tipo": "reserva",
+        "timestamp": "2026-03-19T08:35:00.000Z",
+        "descripcion": "María López",
+        "detalle": "Turno 09:00-10:00"
+      }
+    ]
+  },
+  "message": "Dashboard obtenido correctamente"
 }
 ```

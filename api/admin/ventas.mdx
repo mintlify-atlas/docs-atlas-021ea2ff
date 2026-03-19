@@ -1,17 +1,23 @@
 ---
 title: 'Ventas'
-description: 'Retrieve sales records including product, quantity, price, and date.'
+description: 'Point-of-sale endpoints for recording sales, retrieving history, and managing voids.'
+---
+
+All sales endpoints require authentication and apply automatic sede scoping — employees only see sales from their assigned location.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header. Requires `ventas_sede` permission.</Note>
+
 ---
 
 ## GET /api/ventas
 
-Returns sales records from the system. Each record includes the product sold, quantity, unit price, and transaction date.
+Returns the sales history. Results are automatically filtered to the authenticated employee's sede. Administrators can optionally filter by sede.
 
-<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+### Query parameters
 
-### Request
-
-No parameters or request body required.
+<ParamField query="sede" type="number">
+  Filter by sede ID. Only usable by administrators (`all: true` permission). Employees always see their own sede only.
+</ParamField>
 
 ```bash
 curl --request GET \
@@ -19,55 +25,115 @@ curl --request GET \
   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
+---
+
+## GET /api/ventas/categorias
+
+Returns product categories for use in sale filters and form dropdowns.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/ventas/categorias \
+  --header 'Authorization: Bearer ...'
+```
+
+---
+
+## GET /api/ventas/resumen-turno
+
+Returns a summary of sales for the current shift, filtered by the employee's sede.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/ventas/resumen-turno \
+  --header 'Authorization: Bearer ...'
+```
+
+---
+
+## GET /api/ventas/productos/:id_sede
+
+Returns active products with available stock for a given sede. Used to populate the POS product selection.
+
+<ParamField path="id_sede" type="number" required>
+  ID of the sede to fetch products for.
+</ParamField>
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/ventas/productos/1 \
+  --header 'Authorization: Bearer ...'
+```
+
+---
+
+## GET /api/ventas/:id
+
+Returns the full detail of a single sale.
+
+<ParamField path="id" type="number" required>
+  ID of the sale record.
+</ParamField>
+
+---
+
+## POST /api/ventas
+
+Records a new sale. Reduces stock for each product sold.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+### Request body
+
+<ParamField body="id_sede" type="number" required>
+  ID of the sede where the sale occurred.
+</ParamField>
+
+<ParamField body="items" type="array" required>
+  Array of products included in the sale.
+  <Expandable title="item properties" defaultOpen>
+    <ParamField body="id_producto" type="number" required>
+      Product ID.
+    </ParamField>
+    <ParamField body="cantidad" type="number" required>
+      Quantity sold.
+    </ParamField>
+    <ParamField body="precio_unitario" type="number" required>
+      Unit price at time of sale.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="metodo_pago" type="string">
+  Payment method. Example: `"efectivo"`, `"tarjeta"`.
+</ParamField>
+
+<ParamField body="total" type="number" required>
+  Total amount of the sale.
+</ParamField>
+
 ### Response
 
-**200 OK**
+**201 Created** on success.
 
-<ResponseField name="success" type="boolean" required>
-  Always `true` on success.
-</ResponseField>
+---
 
-<ResponseField name="data" type="array" required>
-  Array of sale records.
+## PATCH /api/ventas/:id/anular
 
-  <Expandable title="sale properties">
-    <ResponseField name="id_venta" type="number" required>
-      Unique identifier for the sale.
-    </ResponseField>
-    <ResponseField name="producto" type="string" required>
-      Name of the product sold.
-    </ResponseField>
-    <ResponseField name="cantidad" type="number" required>
-      Quantity sold.
-    </ResponseField>
-    <ResponseField name="precio" type="number" required>
-      Unit price at the time of sale.
-    </ResponseField>
-    <ResponseField name="fecha" type="string" required>
-      Date of the sale in `YYYY-MM-DD` format.
-    </ResponseField>
-  </Expandable>
-</ResponseField>
+Voids a sale and reverses the stock changes.
 
-### Error responses
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+<ParamField path="id" type="number" required>
+  ID of the sale to void.
+</ParamField>
+
+---
+
+## Error responses
 
 | Status | Condition |
 |---|---|
-| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
-
-### Example response
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id_venta": 101,
-      "producto": "Pelota de Pádel",
-      "cantidad": 3,
-      "precio": 1200.00,
-      "fecha": "2026-03-19"
-    }
-  ]
-}
-```
+| `401 Unauthorized` | Token is missing or employee is inactive. |
+| `403 Forbidden` | Token is expired/invalid, or insufficient permissions (`ventas_sede`), or sede access denied. |
+| `500 Internal Server Error` | Database error. |

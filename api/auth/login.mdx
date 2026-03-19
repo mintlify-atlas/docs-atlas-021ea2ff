@@ -7,7 +7,7 @@ description: 'Authenticate an employee and receive a JWT Bearer token.'
 
 Authenticates an employee using their email and password. On success, returns a JWT token and the authenticated user's profile. The token must be included as a Bearer token in the `Authorization` header for all protected endpoints.
 
-<Warning>This endpoint has a stricter rate limit than other routes. Repeated failed attempts will result in a `429 Too Many Requests` response.</Warning>
+<Warning>This endpoint applies a strict in-memory rate limit: **5 login attempts per IP per 15 minutes**. After the limit is exceeded, all further attempts from that IP return `429 Too Many Requests` until the window resets.</Warning>
 
 ### Request body
 

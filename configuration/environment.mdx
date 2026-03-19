@@ -22,9 +22,9 @@ All environment variables are read by the Express backend at startup. In local d
 </ParamField>
 
 <ParamField path="NODE_ENV" type="string" required>
-  Runtime environment. Affects logging verbosity, error detail in API responses, and whether the Swagger UI is exposed.
+  Runtime environment.   Affects logging verbosity and error detail in API responses.
 
-  Accepted values: `development`, `production`.
+  Accepted values: `development`, `production`. In `development`, error responses include full stack traces.
 </ParamField>
 
 <ParamField path="JWT_SECRET" type="string" required>
@@ -78,6 +78,10 @@ All environment variables are read by the Express backend at startup. In local d
   Set to `debug` when investigating request-handling issues.
 </ParamField>
 
+<ParamField path="BCRYPT_ROUNDS" type="number" default="12">
+  Number of bcrypt salt rounds used when hashing employee passwords. Higher values increase security but also increase CPU time per hash. The default of `12` is appropriate for most deployments.
+</ParamField>
+
 ## Development vs production differences
 
 <Tabs>
@@ -93,7 +97,7 @@ All environment variables are read by the Express backend at startup. In local d
     LOG_LEVEL=debug
     ```
 
-    - API documentation (`/api/docs`) is enabled.
+    - The basic API info endpoint at `/api/docs` is available (returns JSON endpoint listing).
     - Error responses include stack traces.
     - SQL logging can be turned on with `LOG_SQL_QUERIES=true`.
     - Rate limiting is still active; lower `RATE_LIMIT_MAX_REQUESTS` to test throttling behaviour.

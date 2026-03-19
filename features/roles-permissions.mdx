@@ -25,14 +25,14 @@ Permissions are stored as a JSONB object in the `roles` table:
 
 ```json
 {
-  "reservas": true,
-  "inventario": true,
-  "ventas": true,
+  "inventario_sede": true,
+  "inventario_general": false,
+  "ventas_sede": true,
+  "compras_sede": true,
+  "proveedores": false,
   "empleados": false,
   "torneos": true,
-  "reportes": false,
-  "proveedores": false,
-  "clientes": true
+  "all": false
 }
 ```
 
@@ -64,22 +64,22 @@ This means two checks must pass for every request: the right permission and the 
 ## Example: inventory access
 
 ```
-Employee JWT: { id_sede: 2, permisos: { inventario: true } }
+Employee JWT: { id_sede: 2, permisos: { inventario_sede: true, inventario_general: false } }
 
 Request: GET /api/inventario/JacintoRios
-  ✔ permisos.inventario = true   → permission OK
-  ✔ id_sede matches Jacinto Ríos  → scope OK
+  ✔ requirePermission('inventario_sede') → permission OK
+  ✔ scopeToSede: id_sede 2 matches Jacinto Ríos → scope OK
   → 200 OK
 
 Request: GET /api/inventario (Main)
-  ✔ permisos.inventario = true   → permission OK
-  ✘ id_sede 2 ≠ Main (id_sede 1)  → scope DENIED
-  → 403 Forbidden
+  ✔ requirePermission('inventario_sede') → permission OK
+  ✘ scopeToSede: id_sede 2 ≠ Main (id_sede 1) → scope DENIED
+  → 403 SEDE_ACCESS_DENIED
 ```
 
 ## Superadmin bypass
 
-Employees with the `superadmin` role skip the location scope check entirely. They can access any route regardless of `id_sede`. The permission check still applies to `superadmin` — their role record in the `roles` table should have all permissions set to `true`.
+Employees whose `permisos` object contains `"all": true` skip both the permission check and the location scope check entirely. They can access any route at any location. This is controlled by the value in the `roles.permisos` JSONB column — set `"all": true` in the role record to grant unrestricted access.
 
 ## Permission propagation timing
 

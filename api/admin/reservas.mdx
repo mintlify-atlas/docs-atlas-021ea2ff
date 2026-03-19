@@ -1,59 +1,145 @@
 ---
 title: 'Reservas'
-description: 'List reservations and create new bookings for courts.'
+description: 'Manage court reservations: list, filter, create, update status, and record payments.'
 ---
 
-Two endpoints manage reservations: one to query existing bookings with filtering, and one to create new ones.
+Two route groups manage reservations: `GET/PATCH /api/admin/reservas/*` for admin operations and `POST /api/reservas` for creating new bookings.
 
 ---
 
 ## GET /api/admin/reservas
 
-Returns a paginated list of reservations with client information, turno details, and payment status.
+Returns a paginated list of reservations with full client, court, and payment details. Pending reservations older than 2 hours are automatically cancelled on each call.
 
 <Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
 
 ### Query parameters
 
-<ParamField query="fecha" type="string">
-  Filter reservations by date, in `YYYY-MM-DD` format.
+<ParamField query="sede" type="string">
+  Filter by sede name.
+</ParamField>
+
+<ParamField query="deporte" type="string">
+  Filter by sport name.
 </ParamField>
 
 <ParamField query="estado" type="string">
-  Filter by reservation status. Example values: `pendiente`, `confirmada`, `cancelada`.
+  Filter by reservation status. Valid values: `pendiente`, `confirmada`, `finalizada`, `cancelada`, `no_presentado`.
 </ParamField>
 
-<ParamField query="sede_id" type="number">
-  Filter by sede ID.
+<ParamField query="fecha_desde" type="string">
+  Start of date range in `YYYY-MM-DD` format.
 </ParamField>
 
-### Response
+<ParamField query="fecha_hasta" type="string">
+  End of date range in `YYYY-MM-DD` format.
+</ParamField>
 
-**200 OK**
+<ParamField query="cliente_busqueda" type="string">
+  Search string matched against client name, last name, phone, or DNI.
+</ParamField>
 
-<ResponseField name="success" type="boolean" required>
-  Always `true` on success.
-</ResponseField>
+<ParamField query="page" type="number">
+  Page number for pagination. Defaults to `1`.
+</ParamField>
 
-<ResponseField name="data" type="array" required>
-  Paginated list of reservation objects with client info, turno, and payment status.
-</ResponseField>
-
-### Code example
+<ParamField query="limit" type="number">
+  Results per page. Defaults to `50`.
+</ParamField>
 
 ```bash
 curl --request GET \
-  --url 'https://your-domain.com/api/admin/reservas?fecha=2026-03-20&estado=pendiente&sede_id=1' \
+  --url 'https://your-domain.com/api/admin/reservas?estado=pendiente&fecha_desde=2026-03-01&fecha_hasta=2026-03-31' \
   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
 ---
 
+## GET /api/admin/reservas/estadisticas
+
+Returns aggregated statistics for the reservation module.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/admin/reservas/estadisticas \
+  --header 'Authorization: Bearer ...'
+```
+
+---
+
+## GET /api/admin/reservas/filtros
+
+Returns available filter options (sedes, deportes, estados) for populating UI filter dropdowns.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+---
+
+## GET /api/admin/reservas/:id
+
+Returns the full detail of a single reservation.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+---
+
+## PATCH /api/admin/reservas/:id/estado
+
+Updates the status of a reservation. Only valid state transitions are accepted.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+Valid state transitions:
+
+| From | To |
+|---|---|
+| `pendiente` | `confirmada`, `cancelada` |
+| `confirmada` | `finalizada`, `cancelada`, `no_presentado` |
+| `finalizada` | — (terminal) |
+| `cancelada` | — (terminal) |
+| `no_presentado` | — (terminal) |
+
+<ParamField body="estado" type="string" required>
+  The new status. Must be a valid transition from the current state.
+</ParamField>
+
+```bash
+curl --request PATCH \
+  --url https://your-domain.com/api/admin/reservas/42/estado \
+  --header 'Authorization: Bearer ...' \
+  --header 'Content-Type: application/json' \
+  --data '{ "estado": "confirmada" }'
+```
+
+---
+
+## PATCH /api/admin/reservas/:id/pago-completo
+
+Marks a reservation's payment as fully settled.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+---
+
+## POST /api/admin/reservas/expirar-pendientes
+
+Manually triggers expiry of pending reservations that have passed the time limit. Normally called automatically.
+
+---
+
+## POST /api/admin/reservas/finalizar-vencidas
+
+Automatically finalizes reservations whose time slot has already ended.
+
+---
+
 ## POST /api/reservas
 
-Creates a new court reservation. This endpoint can be called without authentication for public client bookings, or by an admin on behalf of a client.
+Creates a new court reservation. Can be called without authentication for public client bookings, or by an admin on behalf of a client.
 
-<Note>When `creado_por_admin` is `false`, the `cliente.dni` field is required.</Note>
+<Note>When `creado_por_admin` is `false`, `cliente.dni` is required. Web clients are also limited to 2 reservations per day per DNI or phone number.</Note>
 
 ### Request body
 
@@ -62,12 +148,11 @@ Creates a new court reservation. This endpoint can be called without authenticat
 </ParamField>
 
 <ParamField body="id_turno" type="number" required>
-  ID of the time slot to book. Must reference an active turno. Returns `409` if already booked for the given date.
+  ID of the time slot to book. Must reference an active turno. Returns `409` if already booked for that date.
 </ParamField>
 
 <ParamField body="cliente" type="object" required>
   Client details for the reservation.
-
   <Expandable title="cliente properties" defaultOpen>
     <ParamField body="cliente.nombre" type="string" required>
       Client first name.
@@ -79,7 +164,7 @@ Creates a new court reservation. This endpoint can be called without authenticat
       Client phone number.
     </ParamField>
     <ParamField body="cliente.dni" type="string">
-      Client national ID number. Required when `creado_por_admin` is `false`.
+      National ID number. Required when `creado_por_admin` is `false`.
     </ParamField>
     <ParamField body="cliente.email" type="string">
       Client email address.
@@ -92,7 +177,7 @@ Creates a new court reservation. This endpoint can be called without authenticat
 </ParamField>
 
 <ParamField body="sena_pagada" type="number">
-  Deposit amount already paid.
+  Deposit amount already paid. Defaults to `0`.
 </ParamField>
 
 <ParamField body="saldo_pendiente" type="number">
@@ -100,15 +185,15 @@ Creates a new court reservation. This endpoint can be called without authenticat
 </ParamField>
 
 <ParamField body="observaciones" type="string">
-  Optional notes or preferences for the reservation.
+  Optional notes or preferences.
 </ParamField>
 
 <ParamField body="estado" type="string">
-  Initial status of the reservation. Defaults to `"pendiente"`.
+  Initial reservation status. Defaults to `"pendiente"`.
 </ParamField>
 
 <ParamField body="creado_por_admin" type="boolean">
-  Set to `true` when an admin is creating the reservation on behalf of a client. When `false` (default), `cliente.dni` is required.
+  Set to `true` when an admin creates the reservation on behalf of a client. Bypasses the DNI requirement and the 2-reservation-per-day limit. Defaults to `false`.
 </ParamField>
 
 ### Response
@@ -116,7 +201,7 @@ Creates a new court reservation. This endpoint can be called without authenticat
 **201 Created**
 
 <ResponseField name="success" type="boolean" required>
-  Always `true` on successful creation.
+  Always `true` on success.
 </ResponseField>
 
 <ResponseField name="data" type="object" required>
@@ -131,8 +216,9 @@ Creates a new court reservation. This endpoint can be called without authenticat
 
 | Status | Condition |
 |---|---|
-| `400 Bad Request` | One or more required fields are missing, or `dni` is required but not provided (`DNI_REQUERIDO`). |
-| `409 Conflict` | The selected `id_turno` is already booked for the given `fecha_reserva`. |
+| `400 Bad Request` | Required fields are missing or `cliente.dni` is absent for a web reservation (`DNI_REQUERIDO`). |
+| `404 Not Found` | The specified `id_turno` does not exist or is inactive. |
+| `409 Conflict` | The `id_turno` is already booked for `fecha_reserva`. |
 
 ### Code example
 
@@ -153,8 +239,6 @@ curl --request POST \
     "precio_total": 1500.00,
     "sena_pagada": 500.00,
     "saldo_pendiente": 1000.00,
-    "observaciones": "Preferencia cancha 2",
-    "estado": "pendiente",
     "creado_por_admin": false
   }'
 ```

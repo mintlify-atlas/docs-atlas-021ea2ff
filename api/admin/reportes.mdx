@@ -1,55 +1,194 @@
 ---
 title: 'Reportes'
-description: 'Retrieve aggregated operational reports filtered by type, date range, and location.'
+description: 'Retrieve aggregated operational reports for sales, reservations, inventory, occupancy, clients, tournaments, and more.'
+---
+
+The reports module exposes multiple dedicated endpoints, each returning a specific category of aggregated data. All endpoints require authentication.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
 ---
 
 ## GET /api/reportes
 
-Returns aggregated reports for the specified report type and date range. Use this endpoint to generate sales, reservation, or inventory summaries for a given period and sede.
+Returns a list of all available report endpoints.
 
-<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/reportes \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
 
-### Query parameters
+**Response:**
 
-<ParamField query="tipo" type="string">
-  The type of report to generate. Example value: `"ventas"`.
+```json
+{
+  "success": true,
+  "data": {
+    "disponibles": [
+      { "id": "ventas", "nombre": "Ingresos", "endpoint": "/api/reportes/ventas" },
+      { "id": "reservas", "nombre": "Reservas", "endpoint": "/api/reportes/reservas-graficos" },
+      { "id": "ocupacion", "nombre": "Ocupación de Canchas", "endpoint": "/api/reportes/ocupacion" },
+      { "id": "clientes", "nombre": "Clientes", "endpoint": "/api/reportes/clientes" },
+      { "id": "inventario", "nombre": "Inventario", "endpoint": "/api/reportes/inventario-graficos" },
+      { "id": "torneos", "nombre": "Torneos", "endpoint": "/api/reportes/torneos" },
+      { "id": "comparativa-sedes", "nombre": "Comparativa Sedes", "endpoint": "/api/reportes/comparativa-sedes" },
+      { "id": "compras", "nombre": "Compras", "endpoint": "/api/reportes/compras" }
+    ]
+  }
+}
+```
+
+---
+
+## GET /api/reportes/ventas
+
+Sales income report grouped by date or period.
+
+<ParamField query="fecha_desde" type="string">
+  Start date in `YYYY-MM-DD` format.
 </ParamField>
 
-<ParamField query="fecha_inicio" type="string">
-  Start of the date range in `YYYY-MM-DD` format.
+<ParamField query="fecha_hasta" type="string">
+  End date in `YYYY-MM-DD` format.
 </ParamField>
 
-<ParamField query="fecha_fin" type="string">
-  End of the date range in `YYYY-MM-DD` format.
+<ParamField query="agrupacion" type="string">
+  Grouping period for totals. Example: `"dia"`, `"semana"`, `"mes"`.
 </ParamField>
 
-<ParamField query="sede_id" type="number">
-  Filter report data to a specific sede by ID.
+```bash
+curl --request GET \
+  --url 'https://your-domain.com/api/reportes/ventas?fecha_desde=2026-01-01&fecha_hasta=2026-03-31&agrupacion=mes' \
+  --header 'Authorization: Bearer ...'
+```
+
+---
+
+## GET /api/reportes/reservas-graficos
+
+Reservation statistics over a date range for charts.
+
+<ParamField query="fecha_desde" type="string">
+  Start date in `YYYY-MM-DD` format.
 </ParamField>
 
-### Response
+<ParamField query="fecha_hasta" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
 
-**200 OK**
+---
 
-<ResponseField name="success" type="boolean" required>
-  Always `true` on success.
-</ResponseField>
+## GET /api/reportes/inventario-graficos
 
-<ResponseField name="data" type="object" required>
-  Aggregated report data. The shape of this object varies depending on the `tipo` requested.
-</ResponseField>
+Current inventory levels by category and location, formatted for charts.
 
-### Error responses
+No query parameters required.
+
+---
+
+## GET /api/reportes/resumen
+
+General summary combining reservations and sales for a date range.
+
+<ParamField query="fecha_desde" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="fecha_hasta" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+---
+
+## GET /api/reportes/kpis-globales
+
+Current month's KPI cards: total income, reservations, and other top-level metrics. Always uses the current calendar month — no date params required.
+
+---
+
+## GET /api/reportes/ocupacion
+
+Court occupancy by time slot and day of week, including peak hour analysis.
+
+<ParamField query="fecha_desde" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="fecha_hasta" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="id_sede" type="number">
+  Filter occupancy data to a specific sede.
+</ParamField>
+
+---
+
+## GET /api/reportes/clientes
+
+Top clients by reservation count, new-client growth by month, and distribution by booking frequency.
+
+<ParamField query="fecha_desde" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="fecha_hasta" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+---
+
+## GET /api/reportes/comparativa-sedes
+
+Side-by-side comparison of income, reservations, and stock between Jacinto Ríos and Rincón.
+
+<ParamField query="fecha_desde" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="fecha_hasta" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+---
+
+## GET /api/reportes/torneos
+
+Tournament activity: inscriptions, distribution by sport and status.
+
+<ParamField query="fecha_desde" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="fecha_hasta" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+---
+
+## GET /api/reportes/compras
+
+Purchase history by supplier, monthly evolution, and category breakdown.
+
+<ParamField query="fecha_desde" type="string">
+  Start date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="fecha_hasta" type="string">
+  End date in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="id_sede" type="number">
+  Filter purchases to a specific sede.
+</ParamField>
+
+---
+
+## Error responses
 
 | Status | Condition |
 |---|---|
 | `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
-| `500 Internal Server Error` | Database query failed (`DATABASE_ERROR`). |
-
-### Code example
-
-```bash
-curl --request GET \
-  --url 'https://your-domain.com/api/reportes?tipo=ventas&fecha_inicio=2026-01-01&fecha_fin=2026-03-31&sede_id=1' \
-  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-```
+| `403 Forbidden` | Authenticated but insufficient permissions (`PERMISSION_DENIED`). |
+| `500 Internal Server Error` | Database query failed. |

@@ -46,7 +46,8 @@ No request body or query parameters are required.
 
 | Status | Condition |
 |---|---|
-| `401 Unauthorized` | The token is missing, expired, malformed, or the employee is no longer active in the database. |
+| `401 Unauthorized` | Token is missing (`NO_TOKEN`) or the employee is no longer active or found in the database. |
+| `403 Forbidden` | Token is expired (`TOKEN_EXPIRED`) or malformed (`MALFORMED_TOKEN` / `INVALID_TOKEN`). |
 
 ### Code example
 

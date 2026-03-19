@@ -1,122 +1,94 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "TANCAT System",
+  "theme": "linden",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#1c1c1c",
+    "light": "#5faac1",
+    "dark": "#bae2e7"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/4d69790b-db71-465d-ad30-a43547dc3d15.png",
+  "logo": {
+    "light": "https://media.brand.dev/e41feeb5-5280-477a-8c54-ea07084264b9.svg",
+    "dark": "https://media.brand.dev/e41feeb5-5280-477a-8c54-ea07084264b9.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/NicoArmanini/tancat-system"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/NicoArmanini/tancat-system"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Overview",
         "groups": [
           {
-            "group": "Getting started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "architecture"]
           },
           {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
+            "group": "Configuration",
+            "pages": ["configuration/environment", "configuration/database", "configuration/deployment"]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Features",
         "groups": [
           {
-            "group": "API documentation",
-            "pages": [
-              "api-reference/introduction"
-            ]
+            "group": "Public Portal",
+            "pages": ["features/court-booking", "features/tournaments", "features/locations"]
           },
           {
-            "group": "Endpoint examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
-            ]
+            "group": "Admin Panel",
+            "pages": ["features/dashboard", "features/reservations", "features/inventory", "features/sales", "features/employees", "features/reports"]
+          },
+          {
+            "group": "Security",
+            "pages": ["features/authentication", "features/roles-permissions"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": ["api/auth/login", "api/auth/logout", "api/auth/verify"]
+          },
+          {
+            "group": "Public Endpoints",
+            "pages": ["api/cliente/sedes", "api/cliente/deportes", "api/cliente/disponibilidad", "api/cliente/torneos"]
+          },
+          {
+            "group": "Admin Endpoints",
+            "pages": ["api/admin/dashboard", "api/admin/reservas", "api/admin/inventario", "api/admin/ventas", "api/admin/torneos", "api/admin/reportes"]
+          },
+          {
+            "group": "Other",
+            "pages": ["api/health", "api/overview"]
+          }
+        ]
+      },
+      {
+        "tab": "Operations",
+        "groups": [
+          {
+            "group": "Deployment",
+            "pages": ["operations/vercel", "operations/environment-variables"]
+          },
+          {
+            "group": "Maintenance",
+            "pages": ["operations/database-migrations", "operations/troubleshooting"]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

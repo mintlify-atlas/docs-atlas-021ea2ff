@@ -1,0 +1,77 @@
+---
+title: "Dashboard"
+description: "The admin dashboard provides a real-time summary of reservations, sales, and operational activity across TANCAT."
+---
+
+The admin dashboard is the first screen you see after logging in. It pulls live data from the backend to give you an at-a-glance view of the complex's current state.
+
+## What the dashboard shows
+
+<CardGroup cols={2}>
+  <Card title="Reservation summary" icon="calendar-check">
+    Today's reservations count, upcoming bookings, and pending reservations waiting for confirmation or payment.
+  </Card>
+  <Card title="Sales activity" icon="cash-register">
+    Recent sales totals and transaction counts, giving a quick view of revenue for the current period.
+  </Card>
+  <Card title="Active tournaments" icon="trophy">
+    Count and names of currently active tournaments across locations.
+  </Card>
+  <Card title="Operational alerts" icon="bell">
+    Highlights pending reservations that are approaching their expiry window and require attention.
+  </Card>
+</CardGroup>
+
+## Data source
+
+The dashboard is powered by `controllers/admin/dashboardController.js` and served at:
+
+```http
+GET /api/admin/dashboard
+```
+
+This endpoint requires a valid JWT. The response aggregates data from multiple tables (`reservas`, `ventas`, `torneos`) into a single payload to minimize round-trips on page load.
+
+Example response shape:
+
+```json
+{
+  "reservas_hoy": 12,
+  "reservas_pendientes": 4,
+  "ventas_hoy": 38500,
+  "torneos_activos": 2,
+  "proximas_reservas": [
+    {
+      "id_reserva": 201,
+      "cliente": "Carlos Medina",
+      "turno": "18:00 - 19:00",
+      "cancha": "Pádel 2",
+      "sede": "Principal"
+    }
+  ]
+}
+```
+
+## Location scoping
+
+The data you see on the dashboard depends on your role:
+
+| Role | Data scope |
+|---|---|
+| `superadmin` | Aggregated data across all three locations |
+| Location manager | Data for their assigned `id_sede` only |
+| Staff | Data for their assigned `id_sede` only |
+
+The `scopeMiddleware.js` applies this filtering before the dashboard controller queries the database, so the backend never returns data outside your permitted scope.
+
+## Frontend
+
+The dashboard frontend lives at `frontend/pages/main.html`. On load, it:
+
+1. Calls `GET /api/auth/verify` via `authGuard.js` to confirm the session is valid
+2. Fetches dashboard data from `GET /api/admin/dashboard`
+3. Renders the summary cards and the upcoming reservations list
+
+<Note>
+  If your token has expired (8-hour window), `authGuard.js` redirects you to the login page before the dashboard data is fetched.
+</Note>

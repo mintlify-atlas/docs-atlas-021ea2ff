@@ -1,0 +1,89 @@
+---
+title: "Inventory"
+description: "Track products and stock levels independently at each of TANCAT's three locations, with full supplier management."
+---
+
+TANCAT's inventory system manages products at each location independently. Stock changes at one sede do not affect another, giving each location manager full control over their own inventory.
+
+## Multi-location inventory
+
+Each location has a dedicated inventory controller and frontend page:
+
+| Location | Frontend page | Controller | API route |
+|---|---|---|---|
+| Main | `inventario.html` | `inventarioController.js` | `GET /api/inventario` |
+| Jacinto Ríos | `inventarioJacintoRios.html` | `inventarioJacintoRiosController.js` | `GET /api/inventario/JacintoRios` |
+| Rincón | `inventarioRincon.html` | `inventarioRinconController.js` | `GET /api/inventario/rincon` |
+
+All three share the same `productos` table in the database, filtered by `id_sede`.
+
+## Product management
+
+<CardGroup cols={2}>
+  <Card title="Add products" icon="circle-plus">
+    Create new product records with name, description, unit price, and initial stock quantity. Products are linked to a specific location.
+  </Card>
+  <Card title="Update stock" icon="arrow-up-from-bracket">
+    Manually adjust stock levels when receiving new stock outside of a formal purchase order, or to correct discrepancies.
+  </Card>
+  <Card title="Track movements" icon="arrows-rotate">
+    Stock is automatically reduced when a sale is recorded. Purchase orders increase stock on receipt.
+  </Card>
+  <Card title="Low stock visibility" icon="triangle-exclamation">
+    View current stock counts for all products at your location and identify items that need reordering.
+  </Card>
+</CardGroup>
+
+## Productos table structure
+
+Key columns in the `productos` table:
+
+| Column | Type | Description |
+|---|---|---|
+| `id_producto` | integer | Primary key |
+| `nombre` | text | Product name |
+| `descripcion` | text | Optional description |
+| `precio_unitario` | numeric | Unit selling price |
+| `stock` | integer | Current stock quantity |
+| `id_sede` | integer | FK to `sedes` — determines which location owns this record |
+| `id_proveedor` | integer | FK to `proveedores` (optional) |
+
+## Supplier management
+
+Suppliers (`proveedores`) are managed from `frontend/pages/proveedores.html` and backed by `controllers/admin/proveedoresController.js`.
+
+Each supplier record stores contact information and is linked to the products they supply. This relationship enables you to quickly identify the supplier for any product when reordering.
+
+Purchase orders (`compras`) record stock replenishment events:
+
+- Each purchase order references a supplier (`id_proveedor`) and one or more products
+- The `comprasController.js` handles creation and listing of purchase orders
+- Receiving a purchase order updates the `stock` count for the relevant products at the relevant location
+
+## Stock flow
+
+```
+compras (purchase order received)
+  └── +stock added to productos.stock
+
+ventas (sale recorded)
+  └── -stock deducted from productos.stock
+```
+
+<Note>
+  Stock is deducted at the point of sale recording, not at checkout. Admins record sales manually in the system after completing a transaction in person.
+</Note>
+
+## Access control
+
+Inventory access is scoped by location:
+
+- Staff at Jacinto Ríos access `/api/inventario/JacintoRios` only
+- Staff at Rincón access `/api/inventario/rincon` only
+- Superadmin can access all three inventory routes
+
+Attempting to access an inventory route outside your assigned `id_sede` returns a `403 Forbidden` response enforced by `scopeMiddleware.js`.
+
+<Tip>
+  To get an aggregate view of stock across all locations, use the Reports section (`/api/reportes`) with the appropriate inventory report type.
+</Tip>

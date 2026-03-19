@@ -1,0 +1,56 @@
+---
+title: 'Deportes'
+description: 'Retrieve all sports available across TANCAT locations.'
+---
+
+## GET /api/cliente/deportes
+
+Returns all sports offered across all TANCAT locations. This endpoint is public and requires no authentication. Use it to populate sport pickers in client-facing booking interfaces.
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/cliente/deportes
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of deporte (sport) objects.
+
+  <Expandable title="deporte properties">
+    <ResponseField name="id_deporte" type="number" required>
+      Unique identifier for the sport.
+    </ResponseField>
+    <ResponseField name="nombre" type="string" required>
+      Display name of the sport.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_deporte": 1,
+      "nombre": "Fútbol"
+    },
+    {
+      "id_deporte": 2,
+      "nombre": "Pádel"
+    }
+  ]
+}
+```

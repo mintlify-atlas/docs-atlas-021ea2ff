@@ -1,0 +1,104 @@
+---
+title: "Roles and permissions"
+description: "Role-based access control with JSONB permissions, location scoping, and middleware enforcement."
+---
+
+TANCAT uses a role-based access control (RBAC) system. Each employee is assigned one role, and each role carries a set of permissions stored as JSONB in the database. The `scopeMiddleware.js` enforces both role permissions and location-based data scoping on every request.
+
+## Role types
+
+<CardGroup cols={3}>
+  <Card title="superadmin" icon="crown">
+    Full access to all features at all three locations. Not scoped to any single sede. Can manage employees, roles, and system configuration.
+  </Card>
+  <Card title="Location manager" icon="user-tie">
+    Full access to features at their assigned location. Can manage staff at their sede. Cannot access other locations.
+  </Card>
+  <Card title="Staff" icon="user">
+    Access to day-to-day operations at their assigned location: reservations, sales, inventory. Cannot manage employees or access reports (depending on role config).
+  </Card>
+</CardGroup>
+
+## Permissions structure
+
+Permissions are stored as a JSONB object in the `roles` table:
+
+```json
+{
+  "reservas": true,
+  "inventario": true,
+  "ventas": true,
+  "empleados": false,
+  "torneos": true,
+  "reportes": false,
+  "proveedores": false,
+  "clientes": true
+}
+```
+
+Each key maps to a feature area of the admin panel. A value of `true` grants access; `false` denies it. This object is embedded in the JWT at login time (as `permisos`).
+
+## Roles table
+
+| Column | Type | Description |
+|---|---|---|
+| `id_rol` | integer | Primary key |
+| `nombre` | text | Role name (e.g., `superadmin`, `encargado`, `empleado`) |
+| `permisos` | jsonb | Permission flags for each feature area |
+
+## How scopeMiddleware.js works
+
+Every protected route passes through `middleware/scopeMiddleware.js`. It performs two checks:
+
+<Steps>
+  <Step title="Permission check">
+    The middleware reads the `permisos` object from the decoded JWT and checks whether the required permission key is `true` for the requested resource. If not, it returns `403 Forbidden`.
+  </Step>
+  <Step title="Location scope check">
+    Unless the employee's role is `superadmin`, the middleware compares the `id_sede` in the JWT against the `id_sede` of the resource being accessed. If they do not match, it returns `403 Forbidden`.
+  </Step>
+</Steps>
+
+This means two checks must pass for every request: the right permission and the right location.
+
+## Example: inventory access
+
+```
+Employee JWT: { id_sede: 2, permisos: { inventario: true } }
+
+Request: GET /api/inventario/JacintoRios
+  ✔ permisos.inventario = true   → permission OK
+  ✔ id_sede matches Jacinto Ríos  → scope OK
+  → 200 OK
+
+Request: GET /api/inventario (Main)
+  ✔ permisos.inventario = true   → permission OK
+  ✘ id_sede 2 ≠ Main (id_sede 1)  → scope DENIED
+  → 403 Forbidden
+```
+
+## Superadmin bypass
+
+Employees with the `superadmin` role skip the location scope check entirely. They can access any route regardless of `id_sede`. The permission check still applies to `superadmin` — their role record in the `roles` table should have all permissions set to `true`.
+
+## Permission propagation timing
+
+<Warning>
+  Permissions are read from the `roles` table at login and embedded in the JWT. If you change a role's `permisos` in the database, the change does not take effect for employees with an active session until they log out and log back in. For immediate effect, the employee must be asked to re-authenticate.
+</Warning>
+
+## Frontend permission gating
+
+The `authGuard.js` script also reads the `permisos` object from the stored JWT to show or hide navigation items in the sidebar. This is a UI convenience only — the backend middleware is the authoritative enforcement layer.
+
+<Note>
+  Never rely solely on frontend permission checks. Always verify access server-side through `scopeMiddleware.js`. The frontend can be bypassed by making direct API calls.
+</Note>
+
+## Managing roles
+
+Roles are managed directly in the database or via admin tooling. To update permissions for a role:
+
+1. Locate the role row in the `roles` table by `id_rol` or `nombre`
+2. Update the `permisos` JSONB object with the new permission flags
+3. Notify affected employees to log out and back in so their token reflects the updated permissions

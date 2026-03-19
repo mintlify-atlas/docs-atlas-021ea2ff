@@ -1,0 +1,55 @@
+---
+title: 'Reportes'
+description: 'Retrieve aggregated operational reports filtered by type, date range, and location.'
+---
+
+## GET /api/reportes
+
+Returns aggregated reports for the specified report type and date range. Use this endpoint to generate sales, reservation, or inventory summaries for a given period and sede.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+### Query parameters
+
+<ParamField query="tipo" type="string">
+  The type of report to generate. Example value: `"ventas"`.
+</ParamField>
+
+<ParamField query="fecha_inicio" type="string">
+  Start of the date range in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="fecha_fin" type="string">
+  End of the date range in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="sede_id" type="number">
+  Filter report data to a specific sede by ID.
+</ParamField>
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  Aggregated report data. The shape of this object varies depending on the `tipo` requested.
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
+| `500 Internal Server Error` | Database query failed (`DATABASE_ERROR`). |
+
+### Code example
+
+```bash
+curl --request GET \
+  --url 'https://your-domain.com/api/reportes?tipo=ventas&fecha_inicio=2026-01-01&fecha_fin=2026-03-31&sede_id=1' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```

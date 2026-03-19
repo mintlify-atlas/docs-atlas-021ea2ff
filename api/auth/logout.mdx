@@ -1,0 +1,55 @@
+---
+title: 'Logout'
+description: 'Invalidate the current session and log the logout event.'
+---
+
+## POST /api/auth/logout
+
+Ends the current employee session. Calling this endpoint logs a `LOGOUT` event to the `sesion_logs` table, providing an audit trail of session activity.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+### Request
+
+No request body is required. The employee is identified from the Bearer token.
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token obtained from [POST /api/auth/login](/api/auth/login).
+
+  Format: `Bearer <token>`
+</ParamField>
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on a successful logout.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Confirmation message. Value is `"Sesión cerrada correctamente."`.
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
+
+### Code example
+
+```bash
+curl --request POST \
+  --url https://your-domain.com/api/auth/logout \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Example response
+
+```json
+{
+  "success": true,
+  "message": "Sesión cerrada correctamente."
+}
+```

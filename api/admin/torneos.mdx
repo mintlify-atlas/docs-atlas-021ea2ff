@@ -1,0 +1,90 @@
+---
+title: 'Torneos (admin)'
+description: 'Retrieve all tournaments including inactive ones, with full details.'
+---
+
+## GET /api/torneos
+
+Returns all tournaments in the system — both active and inactive — with full details. This is the admin equivalent of the public [GET /api/cliente/torneos](/api/cliente/torneos) endpoint, which returns only active tournaments.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/torneos \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of all torneo objects, including inactive tournaments.
+
+  <Expandable title="torneo properties">
+    <ResponseField name="id_torneo" type="number" required>
+      Unique identifier for the tournament.
+    </ResponseField>
+    <ResponseField name="nombre" type="string" required>
+      Display name of the tournament.
+    </ResponseField>
+    <ResponseField name="fecha_inicio" type="string" required>
+      Tournament start date in `YYYY-MM-DD` format.
+    </ResponseField>
+    <ResponseField name="fecha_fin" type="string" required>
+      Tournament end date in `YYYY-MM-DD` format.
+    </ResponseField>
+    <ResponseField name="deporte" type="string" required>
+      Name of the sport for this tournament.
+    </ResponseField>
+    <ResponseField name="sede" type="string" required>
+      Name of the sede hosting this tournament.
+    </ResponseField>
+    <ResponseField name="activo" type="boolean" required>
+      Whether the tournament is currently active.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_torneo": 1,
+      "nombre": "Copa Verano 2026",
+      "fecha_inicio": "2026-02-01",
+      "fecha_fin": "2026-03-31",
+      "deporte": "Pádel",
+      "sede": "Sede Principal",
+      "activo": true
+    },
+    {
+      "id_torneo": 2,
+      "nombre": "Torneo Otoño 2025",
+      "fecha_inicio": "2025-04-01",
+      "fecha_fin": "2025-06-30",
+      "deporte": "Fútbol",
+      "sede": "Rincón",
+      "activo": false
+    }
+  ]
+}
+```

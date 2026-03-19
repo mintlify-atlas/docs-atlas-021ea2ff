@@ -1,0 +1,70 @@
+---
+title: 'Torneos (público)'
+description: 'Retrieve currently active tournaments for client-facing display.'
+---
+
+## GET /api/cliente/torneos
+
+Returns all currently active tournaments. This endpoint is public and requires no authentication. Use it to display upcoming and ongoing tournaments to clients.
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/cliente/torneos
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of active torneo (tournament) objects.
+
+  <Expandable title="torneo properties">
+    <ResponseField name="id_torneo" type="number" required>
+      Unique identifier for the tournament.
+    </ResponseField>
+    <ResponseField name="nombre" type="string" required>
+      Display name of the tournament.
+    </ResponseField>
+    <ResponseField name="fecha_inicio" type="string" required>
+      Tournament start date in `YYYY-MM-DD` format.
+    </ResponseField>
+    <ResponseField name="fecha_fin" type="string" required>
+      Tournament end date in `YYYY-MM-DD` format.
+    </ResponseField>
+    <ResponseField name="deporte" type="string" required>
+      Name of the sport for this tournament.
+    </ResponseField>
+    <ResponseField name="sede" type="string" required>
+      Name of the sede hosting this tournament.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_torneo": 1,
+      "nombre": "Copa Verano 2026",
+      "fecha_inicio": "2026-02-01",
+      "fecha_fin": "2026-03-31",
+      "deporte": "Pádel",
+      "sede": "Sede Principal"
+    }
+  ]
+}
+```
+
+<Note>This endpoint only returns active tournaments. To retrieve all tournaments including inactive ones, use the admin endpoint [GET /api/torneos](/api/admin/torneos).</Note>

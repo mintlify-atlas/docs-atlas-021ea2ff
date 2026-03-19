@@ -1,0 +1,110 @@
+---
+title: 'Login'
+description: 'Authenticate an employee and receive a JWT Bearer token.'
+---
+
+## POST /api/auth/login
+
+Authenticates an employee using their email and password. On success, returns a JWT token and the authenticated user's profile. The token must be included as a Bearer token in the `Authorization` header for all protected endpoints.
+
+<Warning>This endpoint has a stricter rate limit than other routes. Repeated failed attempts will result in a `429 Too Many Requests` response.</Warning>
+
+### Request body
+
+<ParamField body="email" type="string" required>
+  The employee's email address.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The employee's password.
+</ParamField>
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on a successful login.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Confirmation message. Value is `"Login exitoso"`.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="token" type="string" required>
+      JWT Bearer token. Include this in the `Authorization` header for all protected requests.
+    </ResponseField>
+    <ResponseField name="user" type="object" required>
+      <Expandable title="properties">
+        <ResponseField name="id" type="number" required>
+          Unique employee ID.
+        </ResponseField>
+        <ResponseField name="nombre" type="string" required>
+          Employee first name.
+        </ResponseField>
+        <ResponseField name="apellido" type="string" required>
+          Employee last name.
+        </ResponseField>
+        <ResponseField name="email" type="string" required>
+          Employee email address.
+        </ResponseField>
+        <ResponseField name="rol" type="string" required>
+          Employee role, e.g. `"superadmin"`.
+        </ResponseField>
+        <ResponseField name="id_sede" type="number" required>
+          ID of the sede (location) associated with this employee.
+        </ResponseField>
+        <ResponseField name="sede_nombre" type="string" required>
+          Name of the associated sede.
+        </ResponseField>
+        <ResponseField name="permisos" type="object" required>
+          Permissions object for this employee's role.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `400 Bad Request` | `email` or `password` field is missing from the request body. |
+| `401 Unauthorized` | Credentials are incorrect or the employee account is inactive. |
+| `429 Too Many Requests` | Rate limit exceeded for the auth endpoint. |
+
+### Code examples
+
+```bash
+curl --request POST \
+  --url https://your-domain.com/api/auth/login \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "email": "juan@tancat.com",
+    "password": "your-password"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJ...",
+    "user": {
+      "id": 1,
+      "nombre": "Juan",
+      "apellido": "García",
+      "email": "juan@tancat.com",
+      "rol": "superadmin",
+      "id_sede": 1,
+      "sede_nombre": "Sede Principal",
+      "permisos": {}
+    }
+  },
+  "message": "Login exitoso"
+}
+```

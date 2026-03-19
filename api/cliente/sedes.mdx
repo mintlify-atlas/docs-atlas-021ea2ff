@@ -1,0 +1,66 @@
+---
+title: 'Sedes'
+description: 'Retrieve all active sports complex locations with their names, addresses, and operating hours.'
+---
+
+## GET /api/cliente/sedes
+
+Returns all active sedes (locations) in the TANCAT system. This endpoint is public and requires no authentication. Use it to populate location pickers in client-facing interfaces.
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/cliente/sedes
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of active sede objects.
+
+  <Expandable title="sede properties">
+    <ResponseField name="id_sede" type="number" required>
+      Unique identifier for the sede.
+    </ResponseField>
+    <ResponseField name="nombre" type="string" required>
+      Display name of the sede.
+    </ResponseField>
+    <ResponseField name="direccion" type="string" required>
+      Street address of the sede.
+    </ResponseField>
+    <ResponseField name="horario" type="string" required>
+      Operating hours description for the sede.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_sede": 1,
+      "nombre": "Sede Principal",
+      "direccion": "Av. Ejemplo 1234",
+      "horario": "Lun-Dom 7:00-23:00"
+    },
+    {
+      "id_sede": 2,
+      "nombre": "Rincón",
+      "direccion": "Calle Rincón 567",
+      "horario": "Lun-Dom 8:00-22:00"
+    }
+  ]
+}
+```

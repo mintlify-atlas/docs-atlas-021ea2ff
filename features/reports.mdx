@@ -1,0 +1,88 @@
+---
+title: "Reports"
+description: "Generate operational reports for reservations, sales, and inventory across TANCAT locations with date range filtering."
+---
+
+The reports module provides admins with aggregated views of operational data. Reports can be filtered by date range and, for superadmin users, by location.
+
+## Accessing reports
+
+Reports are available at `frontend/pages/reportes.html`, backed by `controllers/admin/reportesController.js`.
+
+```http
+GET /api/reportes
+```
+
+This endpoint requires authentication. Query parameters control the report type, date range, and optionally the location.
+
+## Available report types
+
+<AccordionGroup>
+  <Accordion title="Reservation reports">
+    Summarizes reservation activity over a date range. Includes:
+
+    - Total reservations created
+    - Breakdown by status: `confirmada`, `pendiente`, `cancelada`, `expirada`
+    - Reservations per court and per sport
+    - Reservations created by admin vs. public portal
+
+    Useful for measuring court utilization and identifying peak booking times.
+  </Accordion>
+  <Accordion title="Sales reports">
+    Aggregates product sales data. Includes:
+
+    - Total revenue in the period
+    - Units sold per product
+    - Sales by employee (who recorded the transaction)
+    - Daily or weekly revenue breakdown
+
+    Useful for tracking product performance and staff sales activity.
+  </Accordion>
+  <Accordion title="Inventory reports">
+    Provides a snapshot of current stock levels and movement. Includes:
+
+    - Current stock per product at each location
+    - Stock received via purchase orders in the period
+    - Stock consumed via sales in the period
+    - Products with low or negative stock
+
+    Useful for planning replenishment and auditing discrepancies.
+  </Accordion>
+  <Accordion title="Tournament reports">
+    Lists tournament activity. Includes:
+
+    - Active and completed tournaments
+    - Tournaments per location
+    - Date range for each tournament
+
+    Useful for event planning and historical records.
+  </Accordion>
+</AccordionGroup>
+
+## Date range filtering
+
+All reports accept `fecha_inicio` and `fecha_fin` query parameters:
+
+```http
+GET /api/reportes?tipo=ventas&fecha_inicio=2026-01-01&fecha_fin=2026-03-31
+```
+
+If no date range is specified, the report defaults to the current month.
+
+## Location filtering
+
+| Role | Location filter behavior |
+|---|---|
+| `superadmin` | Can specify any `id_sede` or omit it to get data across all locations |
+| Location manager | Reports are automatically scoped to their `id_sede` |
+| Staff | Reports are automatically scoped to their `id_sede` |
+
+## Exporting data
+
+<Note>
+  The current implementation returns report data as JSON. Export functionality (CSV, PDF) is not built into the backend — the frontend `reportes.html` renders the data in tables that can be printed or manually copied.
+</Note>
+
+## Report caching
+
+Report queries can be expensive for large date ranges. The `reportesController.js` queries the database directly on each request. For frequent large-range reports, consider narrowing the date window or running reports during off-peak hours.

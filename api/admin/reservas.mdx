@@ -1,0 +1,171 @@
+---
+title: 'Reservas'
+description: 'List reservations and create new bookings for courts.'
+---
+
+Two endpoints manage reservations: one to query existing bookings with filtering, and one to create new ones.
+
+---
+
+## GET /api/admin/reservas
+
+Returns a paginated list of reservations with client information, turno details, and payment status.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+### Query parameters
+
+<ParamField query="fecha" type="string">
+  Filter reservations by date, in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField query="estado" type="string">
+  Filter by reservation status. Example values: `pendiente`, `confirmada`, `cancelada`.
+</ParamField>
+
+<ParamField query="sede_id" type="number">
+  Filter by sede ID.
+</ParamField>
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Paginated list of reservation objects with client info, turno, and payment status.
+</ResponseField>
+
+### Code example
+
+```bash
+curl --request GET \
+  --url 'https://your-domain.com/api/admin/reservas?fecha=2026-03-20&estado=pendiente&sede_id=1' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+---
+
+## POST /api/reservas
+
+Creates a new court reservation. This endpoint can be called without authentication for public client bookings, or by an admin on behalf of a client.
+
+<Note>When `creado_por_admin` is `false`, the `cliente.dni` field is required.</Note>
+
+### Request body
+
+<ParamField body="fecha_reserva" type="string" required>
+  Date of the reservation in `YYYY-MM-DD` format.
+</ParamField>
+
+<ParamField body="id_turno" type="number" required>
+  ID of the time slot to book. Must reference an active turno. Returns `409` if already booked for the given date.
+</ParamField>
+
+<ParamField body="cliente" type="object" required>
+  Client details for the reservation.
+
+  <Expandable title="cliente properties" defaultOpen>
+    <ParamField body="cliente.nombre" type="string" required>
+      Client first name.
+    </ParamField>
+    <ParamField body="cliente.apellido" type="string" required>
+      Client last name.
+    </ParamField>
+    <ParamField body="cliente.telefono" type="string" required>
+      Client phone number.
+    </ParamField>
+    <ParamField body="cliente.dni" type="string">
+      Client national ID number. Required when `creado_por_admin` is `false`.
+    </ParamField>
+    <ParamField body="cliente.email" type="string">
+      Client email address.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="precio_total" type="number" required>
+  Total price of the reservation.
+</ParamField>
+
+<ParamField body="sena_pagada" type="number">
+  Deposit amount already paid.
+</ParamField>
+
+<ParamField body="saldo_pendiente" type="number">
+  Remaining balance owed.
+</ParamField>
+
+<ParamField body="observaciones" type="string">
+  Optional notes or preferences for the reservation.
+</ParamField>
+
+<ParamField body="estado" type="string">
+  Initial status of the reservation. Defaults to `"pendiente"`.
+</ParamField>
+
+<ParamField body="creado_por_admin" type="boolean">
+  Set to `true` when an admin is creating the reservation on behalf of a client. When `false` (default), `cliente.dni` is required.
+</ParamField>
+
+### Response
+
+**201 Created**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on successful creation.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="id_reserva" type="number" required>
+      Unique ID of the newly created reservation.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `400 Bad Request` | One or more required fields are missing, or `dni` is required but not provided (`DNI_REQUERIDO`). |
+| `409 Conflict` | The selected `id_turno` is already booked for the given `fecha_reserva`. |
+
+### Code example
+
+```bash
+curl --request POST \
+  --url https://your-domain.com/api/reservas \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "fecha_reserva": "2026-03-20",
+    "id_turno": 5,
+    "cliente": {
+      "nombre": "María",
+      "apellido": "López",
+      "telefono": "351-123-4567",
+      "dni": "38123456",
+      "email": "maria@example.com"
+    },
+    "precio_total": 1500.00,
+    "sena_pagada": 500.00,
+    "saldo_pendiente": 1000.00,
+    "observaciones": "Preferencia cancha 2",
+    "estado": "pendiente",
+    "creado_por_admin": false
+  }'
+```
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id_reserva": 42
+  }
+}
+```

@@ -1,0 +1,60 @@
+---
+title: 'Health check'
+description: 'Check server status, database connectivity, and environment information.'
+---
+
+## GET /api/health
+
+Returns the current health status of the TANCAT API server. This endpoint is public and requires no authentication. Use it for uptime monitoring and deployment verification.
+
+<Note>This endpoint is not rate limited and is safe to poll frequently from monitoring systems.</Note>
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/health
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="status" type="string" required>
+  Overall server status. Value is `"OK"` when the server is healthy.
+</ResponseField>
+
+<ResponseField name="timestamp" type="string" required>
+  ISO 8601 timestamp of when the health check was performed.
+</ResponseField>
+
+<ResponseField name="environment" type="string" required>
+  Deployment environment. For example, `"production"` or `"development"`.
+</ResponseField>
+
+<ResponseField name="version" type="string" required>
+  API version string, e.g. `"1.0.0"`.
+</ResponseField>
+
+<ResponseField name="database" type="string" required>
+  Database connection status. Value is `"Connected"` when the Neon PostgreSQL database is reachable.
+</ResponseField>
+
+<ResponseField name="serverless" type="boolean" required>
+  Indicates whether the API is running in a serverless environment.
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "status": "OK",
+  "timestamp": "2026-03-19T10:00:00.000Z",
+  "environment": "production",
+  "version": "1.0.0",
+  "database": "Connected",
+  "serverless": true
+}
+```

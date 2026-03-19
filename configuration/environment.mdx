@@ -1,0 +1,122 @@
+---
+title: "Environment variables"
+description: "All environment variables for the TANCAT System backend, with descriptions, required status, and default values."
+---
+
+All environment variables are read by the Express backend at startup. In local development, they are loaded from `backend/.env`. In production, they are set in the Vercel dashboard.
+
+<Note>
+  Copy `backend/.env.example` to `backend/.env` before starting the server for the first time. The application will not start without the required variables.
+</Note>
+
+## Required variables
+
+<ParamField path="DATABASE_URL" type="string" required>
+  Full PostgreSQL connection string for Neon. Must include `sslmode=require` as a query parameter.
+
+  ```
+  postgresql://user:password@ep-example.us-east-2.aws.neon.tech/neondb?sslmode=require
+  ```
+
+  See [Database configuration](/configuration/database) for how to obtain this value from the Neon console.
+</ParamField>
+
+<ParamField path="NODE_ENV" type="string" required>
+  Runtime environment. Affects logging verbosity, error detail in API responses, and whether the Swagger UI is exposed.
+
+  Accepted values: `development`, `production`.
+</ParamField>
+
+<ParamField path="JWT_SECRET" type="string" required>
+  Secret key used to sign and verify JSON Web Tokens. Use a long, randomly generated string. Tokens signed with this key grant admin access, so treat it like a database password.
+
+  ```bash
+  # Generate a suitable value
+  node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+  ```
+</ParamField>
+
+<ParamField path="JWT_EXPIRES_IN" type="string" required default="8h">
+  Token lifetime expressed in [zeit/ms](https://github.com/vercel/ms) format. The default `8h` keeps admin sessions active for a full work day.
+
+  Accepted examples: `1h`, `8h`, `7d`.
+</ParamField>
+
+<ParamField path="CORS_ORIGIN" type="string" required>
+  Comma-separated list of allowed origins for cross-origin requests. In development this is the Vite dev server. In production it is your deployed frontend domain.
+
+  ```env
+  # Development
+  CORS_ORIGIN=http://localhost:5173
+
+  # Production (multiple origins separated by comma)
+  CORS_ORIGIN=https://tancat.vercel.app,https://www.tancat.com.ar
+  ```
+</ParamField>
+
+## Optional variables
+
+<ParamField path="PORT" type="number" default="3000">
+  Port the Express server listens on. You only need to change this if port 3000 conflicts with another local service. In Vercel deployments the platform assigns the port automatically.
+</ParamField>
+
+<ParamField path="RATE_LIMIT_WINDOW_MS" type="number" default="900000">
+  Duration in milliseconds for the rate-limiting sliding window. The default is 15 minutes (900,000 ms). Requests are counted per IP within this window.
+</ParamField>
+
+<ParamField path="RATE_LIMIT_MAX_REQUESTS" type="number" default="100">
+  Maximum number of requests allowed per IP within the `RATE_LIMIT_WINDOW_MS` window. Requests exceeding this limit receive a `429 Too Many Requests` response.
+</ParamField>
+
+<ParamField path="LOG_SQL_QUERIES" type="boolean" default="false">
+  When set to `true`, every SQL query executed by the backend is printed to stdout. Useful for debugging controller logic, but noisy in normal development. Do not enable in production.
+</ParamField>
+
+<ParamField path="LOG_LEVEL" type="string" default="info">
+  Controls the minimum severity of log output. Accepted values follow standard levels: `error`, `warn`, `info`, `debug`.
+
+  Set to `debug` when investigating request-handling issues.
+</ParamField>
+
+## Development vs production differences
+
+<Tabs>
+  <Tab title="Development">
+    ```env backend/.env
+    DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+    NODE_ENV=development
+    JWT_SECRET=any-local-secret-here
+    JWT_EXPIRES_IN=8h
+    CORS_ORIGIN=http://localhost:5173
+    PORT=3000
+    LOG_SQL_QUERIES=true
+    LOG_LEVEL=debug
+    ```
+
+    - API documentation (`/api/docs`) is enabled.
+    - Error responses include stack traces.
+    - SQL logging can be turned on with `LOG_SQL_QUERIES=true`.
+    - Rate limiting is still active; lower `RATE_LIMIT_MAX_REQUESTS` to test throttling behaviour.
+  </Tab>
+  <Tab title="Production">
+    ```env Vercel dashboard
+    DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+    NODE_ENV=production
+    JWT_SECRET=<long-random-secret>
+    JWT_EXPIRES_IN=8h
+    CORS_ORIGIN=https://your-frontend.vercel.app
+    RATE_LIMIT_WINDOW_MS=900000
+    RATE_LIMIT_MAX_REQUESTS=100
+    LOG_LEVEL=warn
+    ```
+
+    - Stack traces are suppressed in error responses.
+    - `LOG_SQL_QUERIES` should not be set (defaults to `false`).
+    - `CORS_ORIGIN` must exactly match your deployed frontend URL, including the scheme.
+    - Set variables in the Vercel dashboard under **Settings → Environment Variables**, not in a `.env` file.
+  </Tab>
+</Tabs>
+
+<Warning>
+  Never set `LOG_SQL_QUERIES=true` in production. Query logs can expose sensitive data including client details and reservation information.
+</Warning>

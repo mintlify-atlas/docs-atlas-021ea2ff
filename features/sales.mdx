@@ -1,0 +1,89 @@
+---
+title: "Sales"
+description: "Record and track product sales at each location, with automatic stock deduction and reporting integration."
+---
+
+The sales module lets admins record product transactions at each TANCAT location. Sales are logged in the `ventas` table, stock is automatically adjusted, and all transactions are available for reporting.
+
+## How sales work
+
+<Steps>
+  <Step title="Open the sales page">
+    Navigate to **Ventas** in the admin sidebar (`frontend/pages/ventas.html`). The page loads current products available at your location.
+  </Step>
+  <Step title="Select products">
+    Choose the product(s) being sold. Each item shows the current stock level and unit price. Enter the quantity for each item.
+  </Step>
+  <Step title="Set payment details">
+    Enter the total amount received and the payment method. Add any notes relevant to the transaction.
+  </Step>
+  <Step title="Record the sale">
+    Submit the form. The backend writes a record to `ventas`, deducts the sold quantity from `productos.stock` for the relevant location, and returns the updated inventory state.
+  </Step>
+</Steps>
+
+## Sales data
+
+The `ventas` table captures each sale:
+
+| Column | Type | Description |
+|---|---|---|
+| `id_venta` | integer | Primary key |
+| `id_producto` | integer | FK to `productos` |
+| `id_sede` | integer | FK to `sedes` — the location where the sale occurred |
+| `cantidad` | integer | Units sold |
+| `precio_unitario` | numeric | Price per unit at time of sale |
+| `total` | numeric | `cantidad × precio_unitario` |
+| `fecha_venta` | timestamp | When the sale was recorded |
+| `id_empleado` | integer | FK to `empleados` — who recorded the sale |
+
+## Stock deduction
+
+When a sale is recorded, `ventasController.js` deducts stock from the product record at the matching `id_sede`:
+
+```sql
+UPDATE productos
+SET stock = stock - :cantidad
+WHERE id_producto = :id_producto
+  AND id_sede = :id_sede
+```
+
+<Warning>
+  The system does not prevent sales below zero stock. If `stock` drops to zero or below, the product will show negative stock in the inventory view. Admins should monitor stock levels and record purchase orders to replenish.
+</Warning>
+
+## Backend
+
+Sales are handled by `controllers/admin/ventasController.js`, which exposes endpoints for:
+
+- Listing sales with date range and location filters
+- Recording a new sale (with stock deduction)
+- Retrieving a summary for the dashboard
+
+## Relationship with inventory
+
+Sales and inventory are tightly linked:
+
+```
+productos.stock
+    │
+    ├── +  compras (restocked via purchase orders)
+    └── -  ventas  (reduced on each sale)
+```
+
+This means the inventory view always reflects real-time stock after accounting for all recorded sales and received purchase orders.
+
+## Reporting integration
+
+All sales records feed into the reports module. From `reportes.html` you can generate:
+
+- Total sales by date range
+- Sales by location
+- Sales by product
+- Revenue summaries
+
+See [Reports](/features/reports) for the full list of available report types.
+
+## Access control
+
+Sales access is location-scoped. Staff at Jacinto Ríos can only record and view sales for that location. The `scopeMiddleware.js` enforces this using the `id_sede` from the employee's JWT.

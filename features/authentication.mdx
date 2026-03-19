@@ -1,0 +1,113 @@
+---
+title: "Authentication"
+description: "JWT-based authentication with 8-hour token expiry, session logging, and frontend auth guards."
+---
+
+TANCAT uses JSON Web Tokens (JWT) for all admin authentication. Tokens are issued at login and carry enough information for the backend to authorize every subsequent request without additional database lookups.
+
+## Login flow
+
+<Steps>
+  <Step title="Submit credentials">
+    The login page (`frontend/pages/login.html`) posts the employee's email and password to:
+
+    ```http
+    POST /api/auth/login
+    ```
+
+    ```json
+    {
+      "email": "maria@tancat.com",
+      "password": "plaintext-password"
+    }
+    ```
+  </Step>
+  <Step title="Credential verification">
+    The auth route (`routes/auth.js`) looks up the employee by email in the `empleados` table, verifies the password against the stored bcrypt hash, and confirms the `activo` flag is `true`.
+  </Step>
+  <Step title="Token issued">
+    On success, the server returns a signed JWT with an 8-hour expiry (`expiresIn: '8h'`). The token is stored in the browser (typically `localStorage`) by the frontend.
+  </Step>
+  <Step title="Session logged">
+    Every login event — successful or failed — is written to the `sesion_logs` table with the employee ID, timestamp, event type, and IP address.
+  </Step>
+</Steps>
+
+## JWT payload
+
+The token issued at login contains:
+
+```json
+{
+  "id": 7,
+  "email": "maria@tancat.com",
+  "nombre": "María",
+  "apellido": "Pérez",
+  "rol": "encargado",
+  "id_rol": 2,
+  "id_sede": 1,
+  "sede_nombre": "Principal",
+  "permisos": {
+    "reservas": true,
+    "inventario": true,
+    "ventas": true,
+    "empleados": false,
+    "reportes": true
+  }
+}
+```
+
+The `permisos` object is read directly from the employee's role record in the `roles` table at login time and embedded in the token. This means permission changes take effect on the next login, not immediately.
+
+## Token expiry
+
+Tokens expire after **8 hours**. After expiry:
+
+- API requests return `401 Unauthorized`
+- `authGuard.js` detects the 401 and redirects the user to `login.html`
+- The employee must log in again to receive a new token
+
+<Note>
+  There is no token refresh mechanism. If an employee's session expires mid-shift, they must log in again. Plan shift lengths accordingly or remind staff to log back in after breaks longer than 8 hours.
+</Note>
+
+## Auth endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Verify credentials, return JWT |
+| `POST` | `/api/auth/logout` | Log the logout event to `sesion_logs` |
+| `GET` | `/api/auth/verify` | Verify token validity and check employee is still active |
+
+## Token verification
+
+Every protected route passes through JWT verification middleware before reaching the controller. The `GET /api/auth/verify` endpoint additionally checks that the employee's `activo` flag is still `true` in the database, so deactivated employees are rejected even if their token has not expired.
+
+## Frontend auth utilities
+
+<CardGroup cols={2}>
+  <Card title="authGuard.js" icon="shield-halved">
+    Runs on every admin page load. Calls `GET /api/auth/verify` and redirects to `login.html` if the token is missing, invalid, or the employee is inactive.
+  </Card>
+  <Card title="authFetch.js" icon="plug">
+    A wrapper around `fetch()` that automatically attaches the `Authorization: Bearer <token>` header to every API request. Handles 401 responses by redirecting to login.
+  </Card>
+</CardGroup>
+
+## Session logging
+
+The `sesion_logs` table records all authentication events:
+
+| Column | Description |
+|---|---|
+| `id_log` | Primary key |
+| `id_empleado` | Employee involved |
+| `evento` | Event type: `login`, `logout`, `login_fallido` |
+| `timestamp` | When the event occurred |
+| `ip` | Client IP address |
+
+This log provides an audit trail for security reviews and helps identify unauthorized access attempts.
+
+## Unauthorized access
+
+If a user tries to access an admin page without a valid token, `authGuard.js` redirects them to `login.html`. Requests to protected API endpoints without a valid token receive a `401 Unauthorized` response. Requests with a valid token but insufficient permissions receive a `403 Forbidden` response, which displays `frontend/pages/403.html`.

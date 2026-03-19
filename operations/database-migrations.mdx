@@ -1,0 +1,144 @@
+---
+title: "Database migrations"
+description: "Set up Neon PostgreSQL, run migrations, understand the schema, and create the first admin account for TANCAT System."
+---
+
+TANCAT System uses [Neon](https://neon.tech) as its PostgreSQL provider. Neon is a serverless PostgreSQL platform that scales to zero when idle, making it cost-effective for sports complex applications that have predictable peak hours.
+
+## Setting up Neon PostgreSQL
+
+<Steps>
+  <Step title="Create a Neon account">
+    Go to [neon.tech](https://neon.tech) and sign up for a free account. The free tier includes one project with sufficient compute and storage for a single TANCAT deployment.
+  </Step>
+
+  <Step title="Create a project">
+    In the Neon dashboard, click **New Project**. Give it a descriptive name (e.g., `tancat-production`). Select the AWS region closest to your users — for Argentina, choose **US East (Virginia)** which provides acceptable latency while staying within Neon's free-tier region options.
+  </Step>
+
+  <Step title="Get the connection URL">
+    In your project dashboard, go to **Connection Details**. Copy the connection string in the **Pooled connection** format. It looks like this:
+
+    ```
+    postgresql://usuario:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+    ```
+
+    <Warning>
+      Always use the URL with `?sslmode=require`. Neon requires SSL on all connections and will reject plaintext connections.
+    </Warning>
+  </Step>
+
+  <Step title="Add DATABASE_URL to your environment">
+    In development, add the connection string to your `.env` file:
+
+    ```env
+    DATABASE_URL=postgresql://usuario:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+    ```
+
+    In production on Vercel, add it under **Settings → Environment Variables**.
+  </Step>
+</Steps>
+
+## Running migrations
+
+TANCAT System provides three npm scripts for database setup:
+
+```bash
+# Run only migrations (creates tables and indexes)
+npm run db:migrate
+
+# Populate the database with seed data (sports, locations, roles, etc.)
+npm run db:seed
+
+# Run migrations and seed data together (recommended for first-time setup)
+npm run db:setup
+```
+
+Run `npm run db:setup` once when setting up a new environment. After that, use `npm run db:migrate` to apply schema changes without touching existing data.
+
+<Note>
+  Always run migrations from the project root directory, not from inside the `backend/` folder. The scripts are defined in the root `package.json`.
+</Note>
+
+## Creating the first admin
+
+After running migrations, create the initial superadmin account:
+
+```bash
+node backend/primerAdmin.js
+```
+
+This script inserts the first employee record with full administrative permissions. Use the credentials it outputs to log in to the admin panel for the first time.
+
+<Warning>
+  Run this script exactly once per database. Running it again on an existing database will attempt to insert a duplicate record and may error out.
+</Warning>
+
+## Schema overview
+
+The database is organized around three conceptual domains: **locations and courts**, **people**, and **business operations**.
+
+### Locations and courts
+
+```mermaid
+flowchart LR
+    sedes --> canchas
+    deportes --> canchas
+    canchas --> turnos
+    turnos --> reservas
+```
+
+| Table | Purpose |
+|---|---|
+| `sedes` | Physical locations of the sports complex (branches, campuses). |
+| `deportes` | Sports offered (football, tennis, paddle, etc.). |
+| `canchas` | Individual courts, each linked to a sede and a deporte. |
+| `turnos` | Available time slots for each court (start time, end time, duration). |
+| `reservas` | Confirmed bookings linking a client, a court, and a time slot. |
+
+This hierarchy means: a **sede** has many **canchas**, each **cancha** offers specific **turnos**, and clients book **reservas** against those turnos.
+
+### People
+
+| Table | Purpose |
+|---|---|
+| `clientes` | Public-facing client records (name, contact info, booking history). |
+| `empleados` | Staff accounts with `id_sede`, `id_rol`, `activo` flag, and `password_hash`. |
+| `roles` | Role definitions with a JSON `permisos` column that controls access to admin features. |
+| `sesion_logs` | Append-only log of authentication events (login, logout, failed attempts). |
+
+### Business operations
+
+| Table | Purpose |
+|---|---|
+| `productos` | Inventory items sold at the complex (drinks, equipment rentals, etc.). |
+| `torneos` | Tournaments, with dates, sport, sede, and bracket information. |
+| `proveedores` | Supplier records for purchase orders. |
+| `compras` | Purchase orders placed with suppliers. |
+| `ventas` | Point-of-sale transactions linked to products and optionally to a client. |
+
+## Connection pool configuration
+
+The backend (`backend/config/database.js`) connects to Neon using a connection pool with these settings:
+
+| Setting | Value |
+|---|---|
+| Provider | Neon PostgreSQL (serverless) |
+| Maximum connections | 20 |
+| SSL | Required (`sslmode=require`) |
+
+Neon's serverless driver handles connection multiplexing efficiently, so a pool of 20 is sufficient for most deployments. If you see `too many connections` errors, reduce `RATE_LIMIT_MAX_REQUESTS` to reduce concurrent database load, or upgrade your Neon plan to allow more simultaneous connections.
+
+## Applying schema changes
+
+When you update the schema (add columns, create new tables, add indexes), write a new migration file and run:
+
+```bash
+npm run db:migrate
+```
+
+Migrations are applied in order and are idempotent — running them multiple times on a database that is already up to date is safe.
+
+<Tip>
+  Before running migrations in production, test them against a Neon branch. Neon supports database branching, which lets you create an isolated copy of your production database for safe testing.
+</Tip>

@@ -1,0 +1,145 @@
+---
+title: "Environment variables"
+description: "Complete reference for all environment variables used by the TANCAT System backend, with required/optional status, types, and example values."
+---
+
+TANCAT System reads its configuration from environment variables at startup. In development, these are loaded from a `.env` file in the project root. In production on Vercel, set them through **Settings → Environment Variables** in the dashboard.
+
+<Warning>
+  Never commit `.env` files or any file containing real secrets to your repository. The `.env` file is listed in `.gitignore` by default.
+</Warning>
+
+## Development vs. production
+
+In development, create a `.env` file at the project root:
+
+```env
+# .env (development — never commit this file)
+DATABASE_URL=postgresql://usuario:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+NODE_ENV=development
+JWT_SECRET=any-local-dev-secret-at-least-32-chars
+JWT_EXPIRES_IN=8h
+CORS_ORIGIN=http://localhost:5173
+PORT=3000
+LOG_SQL_QUERIES=true
+LOG_LEVEL=debug
+```
+
+In production, set all required variables in the Vercel dashboard. The `VERCEL_URL` variable is set automatically by Vercel and does not need to be added manually.
+
+---
+
+## Database
+
+<ParamField path="env.DATABASE_URL" type="string" required>
+  Full PostgreSQL connection string for your Neon database. Must include `?sslmode=require` at the end — Neon enforces SSL on all connections.
+
+  Example:
+  ```
+  postgresql://usuario:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+  ```
+
+  Get this value from the **Connection Details** section of your Neon project dashboard.
+</ParamField>
+
+---
+
+## Authentication
+
+<ParamField path="env.JWT_SECRET" type="string" required>
+  Secret key used to sign and verify JSON Web Tokens. This must be a long, random string — at least 32 characters. If this value changes, all existing sessions are immediately invalidated.
+
+  Example:
+  ```
+  JWT_SECRET=a8f3k2m9p7q1r5s0t6u4v8w2x9y3z1b
+  ```
+
+  Generate a secure value with:
+  ```bash
+  openssl rand -hex 32
+  ```
+</ParamField>
+
+<ParamField path="env.JWT_EXPIRES_IN" type="string" default="8h">
+  How long JWT tokens remain valid before expiring. Accepts any value supported by the [ms](https://github.com/vercel/ms) library (e.g., `1h`, `8h`, `1d`).
+
+  The default of `8h` is suitable for a full workday session. For higher-security environments, consider `2h` or `4h`.
+</ParamField>
+
+---
+
+## CORS
+
+<ParamField path="env.CORS_ORIGIN" type="string" required>
+  Comma-separated list of origins that are allowed to make cross-origin requests to the API. In production this must include your frontend's public URL.
+
+  Example:
+  ```
+  CORS_ORIGIN=https://yourdomain.com,https://yourapp.vercel.app
+  ```
+
+  In development, set this to `http://localhost:5173` (the Vite dev server address).
+
+  <Note>
+    On Vercel, the backend also automatically adds `https://$VERCEL_URL` and `https://*.vercel.app` to the allowed origins. You do not need to add `VERCEL_URL` to this list manually.
+  </Note>
+</ParamField>
+
+---
+
+## Server
+
+<ParamField path="env.NODE_ENV" type="string" required default="development">
+  Runtime environment. Set to `production` in all deployed environments. This controls error verbosity, logging behavior, and other runtime optimizations.
+
+  Accepted values: `development`, `production`, `test`.
+</ParamField>
+
+<ParamField path="env.PORT" type="number" default="3000">
+  TCP port the Express server listens on. The default of `3000` is used for local development and matches the Vercel proxy configuration. You rarely need to change this.
+</ParamField>
+
+---
+
+## Rate limiting
+
+<ParamField path="env.RATE_LIMIT_WINDOW_MS" type="number" default="900000">
+  Time window (in milliseconds) for the rate limiter. The default is `900000`, which equals 15 minutes.
+
+  To change the window to 5 minutes:
+  ```
+  RATE_LIMIT_WINDOW_MS=300000
+  ```
+</ParamField>
+
+<ParamField path="env.RATE_LIMIT_MAX_REQUESTS" type="number" default="100">
+  Maximum number of requests allowed per IP address within the rate limit window. When exceeded, the server responds with HTTP `429 Too Many Requests`.
+
+  Lower this value to protect against aggressive scraping. Raise it if legitimate clients (e.g., internal dashboards polling frequently) are being rate limited.
+</ParamField>
+
+---
+
+## Logging
+
+<ParamField path="env.LOG_SQL_QUERIES" type="boolean" default="false">
+  When set to `true`, all SQL queries are printed to the server console along with their execution time. Useful for debugging slow queries or verifying that migrations ran correctly.
+
+  Do not leave this enabled in production — it produces verbose output and may log sensitive data.
+</ParamField>
+
+<ParamField path="env.LOG_LEVEL" type="string" default="info">
+  Controls how much detail the application logger outputs. Accepted values from least to most verbose: `error`, `warn`, `info`, `debug`.
+
+  Use `debug` during local development and `warn` or `error` in production to keep logs manageable.
+</ParamField>
+
+---
+
+## Vercel-managed variables
+
+The following variable is set automatically by Vercel and should not be defined manually:
+
+| Variable | Set by | Description |
+|---|---|---|
+| `VERCEL_URL` | Vercel | Hostname of the current deployment (e.g., `your-project.vercel.app`). Used by the backend to automatically allow the deployment URL as a CORS origin. |

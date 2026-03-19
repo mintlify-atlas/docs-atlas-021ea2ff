@@ -1,0 +1,151 @@
+---
+title: 'Disponibilidad'
+description: 'Query valid sede/sport combinations and available court time slots for a given date.'
+---
+
+Two endpoints support client-facing availability queries: one to discover which sede + deporte combinations have courts, and one to retrieve the available time slots for a specific date.
+
+---
+
+## GET /api/cliente/combinaciones-disponibles
+
+Returns all sede + deporte combinations where at least one court exists. Use this to drive cascading dropdowns in booking forms — only show sports that are actually available at the selected location.
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/cliente/combinaciones-disponibles
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of available sede + deporte combinations.
+
+  <Expandable title="combination properties">
+    <ResponseField name="id_sede" type="number" required>
+      ID of the sede.
+    </ResponseField>
+    <ResponseField name="id_deporte" type="number" required>
+      ID of the sport.
+    </ResponseField>
+    <ResponseField name="sede_nombre" type="string" required>
+      Display name of the sede.
+    </ResponseField>
+    <ResponseField name="deporte_nombre" type="string" required>
+      Display name of the sport.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_sede": 1,
+      "id_deporte": 1,
+      "sede_nombre": "Sede Principal",
+      "deporte_nombre": "Fútbol"
+    },
+    {
+      "id_sede": 1,
+      "id_deporte": 2,
+      "sede_nombre": "Sede Principal",
+      "deporte_nombre": "Pádel"
+    }
+  ]
+}
+```
+
+---
+
+## POST /api/cliente/consulta-disponibilidad
+
+Returns available time slots (turnos) and courts (canchas) for a given sede, sport, and date. All three fields are required.
+
+### Request body
+
+<ParamField body="sede_id" type="number" required>
+  ID of the sede to query. Obtain valid IDs from [GET /api/cliente/sedes](/api/cliente/sedes).
+</ParamField>
+
+<ParamField body="deporte_id" type="number" required>
+  ID of the sport to query. Obtain valid IDs from [GET /api/cliente/deportes](/api/cliente/deportes).
+</ParamField>
+
+<ParamField body="fecha" type="string" required>
+  Date to check availability for, in `YYYY-MM-DD` format.
+</ParamField>
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="turnos_disponibles" type="array" required>
+      List of available time slots for the requested date, sede, and sport.
+    </ResponseField>
+    <ResponseField name="canchas" type="array" required>
+      List of courts available for the requested sede and sport.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `400 Bad Request` | One or more of `sede_id`, `deporte_id`, or `fecha` is missing. |
+
+### Code example
+
+```bash
+curl --request POST \
+  --url https://your-domain.com/api/cliente/consulta-disponibilidad \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "sede_id": 1,
+    "deporte_id": 2,
+    "fecha": "2026-03-20"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": {
+    "turnos_disponibles": [
+      {
+        "id_turno": 3,
+        "hora_inicio": "09:00",
+        "hora_fin": "10:00"
+      }
+    ],
+    "canchas": [
+      {
+        "id_cancha": 1,
+        "nombre": "Cancha 1"
+      }
+    ]
+  }
+}
+```

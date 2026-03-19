@@ -1,0 +1,119 @@
+---
+title: 'API Overview'
+description: 'Base URL structure, authentication, rate limiting, and standard response format for the TANCAT API.'
+---
+
+The TANCAT API is a REST API built with Node.js/Express and backed by a Neon PostgreSQL database. All responses are JSON and follow a consistent envelope structure.
+
+## Base URL
+
+The API is organized into three route groups:
+
+| Group | Prefix | Auth required |
+|---|---|---|
+| Public client endpoints | `/api/cliente/*` | No |
+| Authentication | `/api/auth/*` | Varies |
+| Admin endpoints | `/api/admin/*` and `/api/*` | Yes |
+
+## Authentication
+
+Protected endpoints require a JWT Bearer token in the `Authorization` header.
+
+```bash
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+Obtain a token by calling [POST /api/auth/login](/api/auth/login). Tokens are validated on every request — if the associated employee becomes inactive in the database, the token is rejected immediately.
+
+## Rate limiting
+
+| Endpoint group | Limit |
+|---|---|
+| Public / client endpoints | 100 requests per 15 minutes |
+| Admin endpoints | 500 requests per 15 minutes |
+| Auth endpoints (`/api/auth/*`) | Stricter limit via `rateLimitAuth` |
+
+When a rate limit is exceeded the API returns HTTP `429` with error code `RATE_LIMIT_EXCEEDED`.
+
+## Standard response envelope
+
+Every response wraps its payload in a consistent envelope:
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Human-readable description"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `success` | boolean | `true` on success, `false` on error. |
+| `data` | object \| array | The response payload. Omitted on errors. |
+| `message` | string | Human-readable status or error description. |
+
+## Error response format
+
+All errors follow the same structure:
+
+```json
+{
+  "success": false,
+  "message": "Human-readable error description",
+  "error": "ERROR_CODE",
+  "timestamp": "2026-03-19T10:00:00.000Z"
+}
+```
+
+### Common error codes
+
+| Code | Meaning |
+|---|---|
+| `NOT_FOUND` | The requested resource does not exist. |
+| `CORS_ERROR` | Request origin is not allowed. |
+| `RATE_LIMIT_EXCEEDED` | Too many requests from this client. |
+| `DATABASE_ERROR` | An error occurred querying the database. |
+| `INTERNAL_SERVER_ERROR` | Unexpected server-side error. |
+| `DNI_REQUERIDO` | DNI is required for public reservations. |
+
+## Endpoint reference
+
+<Columns cols={2}>
+  <Card title="Auth" icon="lock" href="/api/auth/login">
+    Login, logout, and token verification.
+  </Card>
+  <Card title="Health" icon="heart-pulse" href="/api/health">
+    Server and database health check.
+  </Card>
+  <Card title="Sedes" icon="building" href="/api/cliente/sedes">
+    Active sports complex locations.
+  </Card>
+  <Card title="Deportes" icon="football" href="/api/cliente/deportes">
+    Sports available across all locations.
+  </Card>
+  <Card title="Disponibilidad" icon="calendar" href="/api/cliente/disponibilidad">
+    Court availability and time slots.
+  </Card>
+  <Card title="Torneos (público)" icon="trophy" href="/api/cliente/torneos">
+    Active tournaments for clients.
+  </Card>
+  <Card title="Dashboard" icon="chart-bar" href="/api/admin/dashboard">
+    Admin summary statistics.
+  </Card>
+  <Card title="Reservas" icon="calendar-check" href="/api/admin/reservas">
+    Manage court reservations.
+  </Card>
+  <Card title="Inventario" icon="box" href="/api/admin/inventario">
+    Stock management across locations.
+  </Card>
+  <Card title="Ventas" icon="receipt" href="/api/admin/ventas">
+    Sales records.
+  </Card>
+  <Card title="Torneos (admin)" icon="trophy" href="/api/admin/torneos">
+    Full tournament management.
+  </Card>
+  <Card title="Reportes" icon="file-chart-bar" href="/api/admin/reportes">
+    Aggregated reports and analytics.
+  </Card>
+</Columns>

@@ -1,0 +1,73 @@
+---
+title: 'Ventas'
+description: 'Retrieve sales records including product, quantity, price, and date.'
+---
+
+## GET /api/ventas
+
+Returns sales records from the system. Each record includes the product sold, quantity, unit price, and transaction date.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/ventas \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of sale records.
+
+  <Expandable title="sale properties">
+    <ResponseField name="id_venta" type="number" required>
+      Unique identifier for the sale.
+    </ResponseField>
+    <ResponseField name="producto" type="string" required>
+      Name of the product sold.
+    </ResponseField>
+    <ResponseField name="cantidad" type="number" required>
+      Quantity sold.
+    </ResponseField>
+    <ResponseField name="precio" type="number" required>
+      Unit price at the time of sale.
+    </ResponseField>
+    <ResponseField name="fecha" type="string" required>
+      Date of the sale in `YYYY-MM-DD` format.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_venta": 101,
+      "producto": "Pelota de Pádel",
+      "cantidad": 3,
+      "precio": 1200.00,
+      "fecha": "2026-03-19"
+    }
+  ]
+}
+```

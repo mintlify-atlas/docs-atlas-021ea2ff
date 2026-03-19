@@ -1,0 +1,79 @@
+---
+title: "Employees"
+description: "Manage staff records, location assignments, and role assignments across all TANCAT locations."
+---
+
+The employee management module lets superadmin users and location managers create and maintain staff accounts. Each employee is assigned to a specific location and role, which determines what they can access in the system.
+
+## Employee records
+
+Employee data is stored in the `empleados` table:
+
+| Column | Type | Description |
+|---|---|---|
+| `id_empleado` | integer | Primary key |
+| `nombre` | string | First name |
+| `apellido` | string | Last name |
+| `email` | string | Login email (unique) |
+| `password` | string | bcrypt-hashed password |
+| `id_rol` | integer | FK to `roles` table |
+| `id_sede` | integer | FK to `sedes` — the employee's assigned location |
+| `activo` | boolean | Whether the employee can log in |
+
+## Managing employees
+
+Employee management is available at `frontend/pages/empleados.html`.
+
+<CardGroup cols={2}>
+  <Card title="Create employee" icon="user-plus">
+    Add a new staff member with their name, email, initial password, role, and location assignment. The password is hashed with bcrypt before storage.
+  </Card>
+  <Card title="Update details" icon="pen-to-square">
+    Edit an employee's name, email, role, or location assignment. Password changes are hashed on save.
+  </Card>
+  <Card title="Activate / deactivate" icon="toggle-on">
+    Toggle the `activo` flag to control login access. Deactivating an employee does not delete their record, preserving audit history.
+  </Card>
+  <Card title="Role assignment" icon="shield">
+    Assign or change the employee's role. The role determines which parts of the admin panel they can access and what actions they can perform.
+  </Card>
+</CardGroup>
+
+## Location scoping
+
+An employee's `id_sede` is embedded in their JWT on login. The `scopeMiddleware.js` uses this value to restrict access:
+
+- Staff at **Main** can only access Main location data
+- Staff at **Jacinto Ríos** can only access Jacinto Ríos data
+- Staff at **Rincón** can only access Rincón data
+- `superadmin` users are exempt from location scoping and can access all locations
+
+<Note>
+  An employee's assigned location cannot be inferred — it must be explicitly set when creating the account. An employee without a valid `id_sede` will be unable to access location-specific resources.
+</Note>
+
+## Active status and login
+
+When an employee attempts to log in, the auth route (`POST /api/auth/login`) verifies:
+
+1. The email exists in `empleados`
+2. The password matches the stored bcrypt hash
+3. The `activo` field is `true`
+
+If `activo` is `false`, the login is rejected even if the credentials are correct. The `GET /api/auth/verify` endpoint also checks `activo` on every request — if an admin deactivates an employee mid-session, their token will be rejected on the next API call.
+
+<Warning>
+  Deactivating an employee does not immediately invalidate their current JWT. The token remains valid until it either expires (8-hour window) or they make a request that triggers `authGuard.js` verification. For immediate revocation, the employee must also be logged out via `POST /api/auth/logout`.
+</Warning>
+
+## Roles and permissions
+
+Each employee has a single role (`id_rol`). Roles define a set of permissions stored as JSONB in the `roles` table. See [Roles and permissions](/features/roles-permissions) for details on how permissions are structured and enforced.
+
+## Access control for employee management
+
+Not all roles can manage employees. Typically:
+
+- `superadmin` — full access to create, update, and deactivate employees at any location
+- Location managers — may manage staff at their own sede, depending on their role's permissions
+- Regular staff — no access to employee management

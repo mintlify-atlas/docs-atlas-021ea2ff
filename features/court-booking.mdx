@@ -1,0 +1,95 @@
+---
+title: "Court booking"
+description: "How the public court booking portal works — from selecting a location to confirming a reservation."
+---
+
+The public booking portal lets customers check court availability and make reservations without needing an admin account. It is served entirely through unauthenticated API endpoints under `/api/cliente/`.
+
+## Booking flow
+
+<Steps>
+  <Step title="Select a location">
+    The portal loads all active locations by calling `GET /api/cliente/sedes`. Each location (sede) is returned with its `id` and display name. The customer selects one of the three locations: Main, Jacinto Ríos, or Rincón.
+  </Step>
+  <Step title="Select a sport">
+    After choosing a location, the portal calls `GET /api/cliente/deportes` to retrieve the full list of available sports, then `GET /api/cliente/combinaciones-disponibles` to filter which sport–location pairs are actually configured. Only valid combinations are presented to the customer.
+  </Step>
+  <Step title="Pick a date">
+    The customer selects a date using the date picker. The selected date, location, and sport are sent to `POST /api/cliente/consulta-disponibilidad`, which returns the time slots (`turnos`) for that combination along with each slot's availability status.
+  </Step>
+  <Step title="Choose a time slot">
+    Available slots are displayed as selectable options. Slots already booked or held by a pending reservation are marked as unavailable and cannot be selected.
+  </Step>
+  <Step title="Enter customer details">
+    Before confirming, the customer fills in their details:
+
+    | Field | Required | Notes |
+    |---|---|---|
+    | `nombre` | Yes | First name |
+    | `apellido` | Yes | Last name |
+    | `telefono` | Yes | Contact phone number |
+    | `dni` | **Yes (web)** | National identity number — mandatory for public bookings |
+
+    <Note>
+      DNI is mandatory for reservations made through the public portal. Admin-created reservations (where `creado_por_admin: true`) can omit the DNI field.
+    </Note>
+  </Step>
+  <Step title="Confirm the reservation">
+    On submission, the frontend posts to `POST /api/reservas` with the full reservation payload. The backend re-checks availability before writing to the database to prevent double bookings.
+  </Step>
+</Steps>
+
+## Reservation payload
+
+When a customer completes the booking form, the frontend sends:
+
+```json
+{
+  "fecha_reserva": "2026-03-20",
+  "id_turno": 14,
+  "cliente": {
+    "nombre": "María",
+    "apellido": "González",
+    "telefono": "351-555-0198",
+    "dni": "38412765"
+  },
+  "precio_total": 4500,
+  "sena_pagada": 0,
+  "saldo_pendiente": 4500,
+  "observaciones": "",
+  "creado_por_admin": false
+}
+```
+
+## Auto-expiry of pending reservations
+
+Reservations created through the public portal start in `pendiente` (pending) status. The service at `services/expirarReservas.js` runs on a schedule to automatically expire reservations that were never confirmed or paid within the allowed window.
+
+<Warning>
+  Once a reservation expires, the time slot is released and becomes available for other customers. Customers should confirm payment with the complex directly to avoid losing their slot.
+</Warning>
+
+The expiry service:
+- Queries all reservations with `estado = 'pendiente'` that are past their expiry threshold
+- Updates their status to `expirada`
+- Releases the associated `turno` so it can be booked again
+
+## API response caching
+
+The frontend's `apiClient.js` caches responses for read-heavy public endpoints (locations, sports, valid combinations) to reduce redundant network calls during a single booking session. Cache entries are invalidated when the session reloads or after a set TTL.
+
+This improves perceived performance for customers browsing available slots without impacting booking accuracy — availability checks (`consulta-disponibilidad`) are never cached.
+
+## Public endpoints reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/cliente/sedes` | All active locations |
+| `GET` | `/api/cliente/deportes` | All sports |
+| `GET` | `/api/cliente/combinaciones-disponibles` | Valid sede–sport pairs |
+| `POST` | `/api/cliente/consulta-disponibilidad` | Availability for a date |
+| `GET` | `/api/cliente/torneos` | Active tournaments |
+
+<Tip>
+  The `/api/cliente/` endpoints require no authentication token. They are safe to call from any public-facing frontend without exposing credentials.
+</Tip>

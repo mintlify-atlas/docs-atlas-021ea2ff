@@ -1,0 +1,79 @@
+---
+title: 'Verify token'
+description: 'Check whether a JWT token is still valid and the associated employee is active.'
+---
+
+## GET /api/auth/verify
+
+Verifies that a JWT Bearer token is valid and that the associated employee account is still active in the database. Use this endpoint on application startup or after a period of inactivity to confirm the session is still usable before making further requests.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+### Request
+
+No request body or query parameters are required.
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token obtained from [POST /api/auth/login](/api/auth/login).
+
+  Format: `Bearer <token>`
+</ParamField>
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` when the token is valid.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Confirmation message. Value is `"Token válido"`.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="valid" type="boolean" required>
+      Always `true` in a 200 response.
+    </ResponseField>
+    <ResponseField name="user" type="object" required>
+      The decoded token payload for the authenticated employee. Fields match the `user` object returned by [POST /api/auth/login](/api/auth/login).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `401 Unauthorized` | The token is missing, expired, malformed, or the employee is no longer active in the database. |
+
+### Code example
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/auth/verify \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": {
+    "valid": true,
+    "user": {
+      "id": 1,
+      "nombre": "Juan",
+      "apellido": "García",
+      "email": "juan@tancat.com",
+      "rol": "superadmin",
+      "id_sede": 1,
+      "sede_nombre": "Sede Principal",
+      "permisos": {}
+    }
+  },
+  "message": "Token válido"
+}
+```

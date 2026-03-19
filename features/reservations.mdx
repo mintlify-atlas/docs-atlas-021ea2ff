@@ -1,0 +1,126 @@
+---
+title: "Reservations"
+description: "Full lifecycle management for court reservations — from creation through payment tracking to expiry or cancellation."
+---
+
+Reservations are the core transaction in TANCAT. They record a customer's booking of a specific court time slot, along with payment status and any notes from staff.
+
+## Reservation lifecycle
+
+```
+pendiente → confirmada
+           → cancelada
+           → expirada  (auto, via expirarReservas.js)
+```
+
+<Steps>
+  <Step title="Created">
+    A reservation is created either through the public booking portal or directly by an admin. It starts in `pendiente` status with the `precio_total` set and `saldo_pendiente` equal to the full amount if no deposit was paid.
+  </Step>
+  <Step title="Pending">
+    While `pendiente`, the time slot is held and unavailable for other customers. The expiry service monitors all pending reservations and will automatically expire them if they are not actioned within the allowed window.
+  </Step>
+  <Step title="Confirmed">
+    Once payment is received (in full or as an agreed deposit), an admin updates the status to `confirmada`. The `sena_pagada` and `saldo_pendiente` fields are updated to reflect what was paid.
+  </Step>
+  <Step title="Cancelled or expired">
+    An admin can manually set status to `cancelada`. Reservations not confirmed in time are set to `expirada` by the background service. Either way, the time slot is released.
+  </Step>
+</Steps>
+
+## Required fields
+
+When creating a reservation, the following fields are required:
+
+| Field | Type | Description |
+|---|---|---|
+| `fecha_reserva` | date | Date of the booking (`YYYY-MM-DD`) |
+| `id_turno` | integer | FK to the `turnos` time slot |
+| `cliente.nombre` | string | Customer first name |
+| `cliente.apellido` | string | Customer last name |
+| `cliente.telefono` | string | Contact phone number |
+| `cliente.dni` | string | National ID (mandatory for web bookings) |
+| `precio_total` | number | Total cost of the reservation |
+
+## Optional fields
+
+| Field | Type | Description |
+|---|---|---|
+| `sena_pagada` | number | Deposit amount already paid |
+| `saldo_pendiente` | number | Remaining balance |
+| `observaciones` | string | Staff notes |
+| `estado` | string | Initial status (defaults to `pendiente`) |
+| `creado_por_admin` | boolean | `true` when created by an admin — waives DNI requirement |
+
+## Admin vs. web reservations
+
+<Tabs>
+  <Tab title="Web (public portal)">
+    - Customer fills out the booking form on the public portal
+    - DNI is **mandatory**
+    - `creado_por_admin` is `false`
+    - Reservation starts as `pendiente`
+    - Subject to auto-expiry if not confirmed
+  </Tab>
+  <Tab title="Admin-created">
+    - Admin fills out the reservation form inside the admin panel
+    - DNI can be omitted
+    - `creado_por_admin` is `true`
+    - Admin can set the initial status directly (e.g., create already `confirmada`)
+    - Can record partial or full payment at creation time
+  </Tab>
+</Tabs>
+
+## Payment tracking
+
+Each reservation tracks three payment-related fields:
+
+```json
+{
+  "precio_total": 5000,
+  "sena_pagada": 2000,
+  "saldo_pendiente": 3000
+}
+```
+
+These are updated by admins as payments are received. The system does not process payments — it records what was collected in person or via transfer.
+
+<Note>
+  `saldo_pendiente` is not automatically calculated from `precio_total - sena_pagada`. You must set it explicitly when updating a reservation.
+</Note>
+
+## Admin reservation management
+
+The reservations admin page (`frontend/pages/reserva.html`) and its backend controller (`controllers/admin/reservasController.js`) give admins the ability to:
+
+- View all reservations with filters by date, location, and status
+- Create reservations on behalf of customers
+- Update payment fields and status
+- Cancel reservations and add notes
+- View a specific customer's full reservation history via `GET /api/cliente/historial-reservas/:clienteId`
+
+## Auto-expiry service
+
+The `services/expirarReservas.js` service runs on a schedule and:
+
+1. Queries all reservations with `estado = 'pendiente'` past the expiry threshold
+2. Bulk-updates their status to `expirada`
+3. Logs the expiry event
+
+<Warning>
+  Expired reservations cannot be reinstated automatically. If a customer returns after expiry, an admin must create a new reservation and re-check availability.
+</Warning>
+
+## Client management
+
+Admins manage client records via the clients controller:
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/cliente/lista-clientes` | All clients with their reservation count |
+| `GET /api/cliente/historial-reservas/:clienteId` | Full history for one client |
+| `POST /api/cliente/crear-cliente` | Create a new client record |
+| `PUT /api/cliente/actualizar-cliente/:clienteId` | Update client details |
+| `DELETE /api/cliente/eliminar-cliente/:clienteId` | Deactivate a client |
+
+Deleting a client deactivates their record rather than removing it, preserving the reservation history for reporting.

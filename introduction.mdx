@@ -1,0 +1,93 @@
+---
+title: "TANCAT System"
+description: "Full-stack sports complex administration platform for Complejo Deportivo TANCAT in Córdoba, Argentina"
+---
+
+<img
+  className="block"
+  src="https://media.brand.dev/e41feeb5-5280-477a-8c54-ea07084264b9.svg"
+  alt="TANCAT System"
+  style={{ maxHeight: "80px", marginBottom: "2rem" }}
+/>
+
+# TANCAT System
+
+TANCAT System is a comprehensive sports complex administration platform built for Complejo Deportivo TANCAT, operating since 1991 in Córdoba, Argentina. It manages court bookings, inventory, sales, tournaments, and employees across three locations: Main, Jacinto Ríos, and Rincón.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get the system running locally in under 5 minutes
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture">
+    Understand the monorepo structure and tech stack
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore every REST endpoint with request and response schemas
+  </Card>
+  <Card title="Deployment" icon="cloud" href="/operations/vercel">
+    Deploy to Vercel with Neon PostgreSQL
+  </Card>
+</CardGroup>
+
+## What TANCAT System does
+
+<CardGroup cols={3}>
+  <Card title="Court Booking" icon="calendar-check">
+    Public portal for checking court availability and making reservations across all locations
+  </Card>
+  <Card title="Admin Panel" icon="gauge">
+    Full back-office for reservations, inventory, sales, employees, and reports
+  </Card>
+  <Card title="Multi-location" icon="location-dot">
+    Manage three independent locations with per-location inventory and staff
+  </Card>
+  <Card title="Tournaments" icon="trophy">
+    Organize and manage tournaments with public registration and bracket tracking
+  </Card>
+  <Card title="Inventory" icon="boxes-stacked">
+    Track products and stock levels independently at each location
+  </Card>
+  <Card title="Reporting" icon="chart-bar">
+    Generate sales, reservation, and operational reports by date range and location
+  </Card>
+</CardGroup>
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Node.js + Express.js |
+| Frontend | Vanilla JavaScript (ES6+) + Vite |
+| Database | Neon PostgreSQL (serverless) |
+| Auth | JWT (8-hour expiry) |
+| Deployment | Vercel (São Paulo region) |
+| Security | Helmet, CORS, Rate Limiting, bcrypt |
+
+## Project locations
+
+TANCAT operates three courts complexes, each with independent inventory management:
+
+- **Main** (`id_sede: 1`) — Primary location, full feature set
+- **Jacinto Ríos** (`id_sede: 2`) — Dedicated inventory management
+- **Rincón** (`id_sede: 3`) — Dedicated inventory management
+
+<Note>
+  Employee access is scoped by location — staff at Jacinto Ríos can only access inventory and operations for their sede unless they have the `superadmin` role.
+</Note>
+
+## Next steps
+
+<Steps>
+  <Step title="Set up the project">
+    Follow the [Quickstart](/quickstart) to clone the repo, configure Neon, and start the system
+  </Step>
+  <Step title="Configure your environment">
+    Set [environment variables](/configuration/environment) for your database, JWT secret, and CORS origins
+  </Step>
+  <Step title="Explore the features">
+    Learn about [court booking](/features/court-booking), [inventory](/features/inventory), [sales](/features/sales), and more
+  </Step>
+  <Step title="Integrate via API">
+    Browse the [API reference](/api/overview) to integrate with TANCAT from external systems
+  </Step>
+</Steps>

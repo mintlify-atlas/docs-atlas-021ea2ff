@@ -1,0 +1,61 @@
+---
+title: 'Dashboard'
+description: "Retrieve a summary of today's reservations, sales, active tournaments, and low stock alerts."
+---
+
+## GET /api/admin/dashboard
+
+Returns a summary of key operational metrics for the current day. This data powers the admin dashboard overview panel.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/admin/dashboard \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="reservas_hoy" type="number" required>
+      Total number of reservations for today.
+    </ResponseField>
+    <ResponseField name="ventas_hoy" type="number" required>
+      Total sales value for today (in the system's currency unit).
+    </ResponseField>
+    <ResponseField name="torneos_activos" type="number" required>
+      Number of currently active tournaments.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error responses
+
+| Status | Condition |
+|---|---|
+| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": {
+    "reservas_hoy": 12,
+    "ventas_hoy": 45000,
+    "torneos_activos": 2
+  }
+}
+```

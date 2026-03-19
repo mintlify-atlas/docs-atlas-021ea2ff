@@ -1,0 +1,76 @@
+---
+title: "Locations"
+description: "TANCAT operates three sports complexes in Córdoba, Argentina, each with independent inventory, courts, and staff."
+---
+
+TANCAT System is designed around three distinct physical locations (sedes). Each location operates independently with its own courts, sports offerings, inventory, and assigned staff.
+
+## The three locations
+
+<CardGroup cols={3}>
+  <Card title="Main" icon="building">
+    The primary location (`id_sede: 1`). Full feature set including reservations, inventory, sales, and reporting. The admin dashboard defaults to this sede.
+  </Card>
+  <Card title="Jacinto Ríos" icon="building">
+    Second location (`id_sede: 2`). Has a dedicated inventory management interface at `inventarioJacintoRios.html` with its own controller (`inventarioJacintoRiosController.js`).
+  </Card>
+  <Card title="Rincón" icon="building">
+    Third location (`id_sede: 3`). Has a dedicated inventory management interface at `inventarioRincon.html` with its own controller (`inventarioRinconController.js`).
+  </Card>
+</CardGroup>
+
+## Sports and courts per location
+
+Each location can offer a different combination of sports. The relationship is managed through the `combinaciones-disponibles` endpoint, which returns only valid sede–sport pairs.
+
+The data model:
+
+```
+sedes (locations)
+  └── canchas (courts)
+        └── deportes (sport assigned to each court)
+              └── turnos (time slots for each court)
+```
+
+A court (`cancha`) belongs to a specific location and has a sport (`deporte`) assigned to it. Time slots (`turnos`) are defined per court. This structure means two locations can offer the same sport but with completely independent court schedules.
+
+## Independent inventory management
+
+Inventory is tracked separately at each location. The system provides three distinct inventory routes:
+
+| Route | Location | Controller |
+|---|---|---|
+| `GET /api/inventario` | Main | `inventarioController.js` |
+| `GET /api/inventario/JacintoRios` | Jacinto Ríos | `inventarioJacintoRiosController.js` |
+| `GET /api/inventario/rincon` | Rincón | `inventarioRinconController.js` |
+
+Stock levels, products, and purchase orders are managed independently — a product sold at Rincón does not affect Main's stock.
+
+<Tip>
+  To see a unified view of inventory across all locations, use the Reports section, which can aggregate stock data by sede.
+</Tip>
+
+## Staff scoping
+
+Employee access is restricted by location. When an employee logs in, their JWT includes `id_sede` and `sede_nombre`. The `scopeMiddleware.js` uses this to filter data so staff at Jacinto Ríos only see and manage resources at their location.
+
+Superadmin users are the exception — they can access and manage all three locations without restriction.
+
+## Location data (sedes table)
+
+The `sedes` table stores the core location data:
+
+| Column | Type | Description |
+|---|---|---|
+| `id_sede` | integer | Primary key |
+| `nombre` | text | Display name |
+| `direccion` | text | Physical address |
+| `activo` | boolean | Whether the location is active |
+
+Only active locations are returned by `GET /api/cliente/sedes` for the public booking portal.
+
+## Adding a new location
+
+<Warning>
+  Adding a fourth location requires database changes (new row in `sedes`), a new inventory controller and route, and frontend updates including a new inventory HTML page. The current architecture expects exactly the three named locations for some hardcoded route paths.
+</Warning>

@@ -1,0 +1,89 @@
+---
+title: "Tournaments"
+description: "Create and manage tournaments from the admin panel, with public visibility through the booking portal."
+---
+
+TANCAT supports organizing tournaments across its locations. Admins manage the full tournament lifecycle — creation, scheduling, and tracking — while customers can view active tournaments through the public portal.
+
+## Admin tournament management
+
+Tournament management lives at `frontend/pages/torneos.html` and is backed by `controllers/admin/torneosController.js`.
+
+<CardGroup cols={2}>
+  <Card title="Create tournaments" icon="circle-plus">
+    Define tournament name, sport, location, dates, and any relevant details. Tournaments are stored in the `torneos` table.
+  </Card>
+  <Card title="Update and track" icon="pen-to-square">
+    Edit tournament details as the event progresses. Update status, bracket information, and scheduling from the admin panel.
+  </Card>
+  <Card title="Per-location scope" icon="location-dot">
+    Tournaments are associated with a specific sede. Location-scoped staff can only manage tournaments at their assigned location.
+  </Card>
+  <Card title="Public visibility" icon="eye">
+    Active tournaments are exposed through the public API so customers can see upcoming events without logging in.
+  </Card>
+</CardGroup>
+
+## Creating a tournament
+
+<Steps>
+  <Step title="Open tournament management">
+    Navigate to **Torneos** in the admin sidebar. You must be logged in with a role that has tournament management permissions.
+  </Step>
+  <Step title="Fill in tournament details">
+    Provide the tournament name, associated sport (`id_deporte`), location (`id_sede`), start date, and any notes or rules.
+  </Step>
+  <Step title="Save and publish">
+    Once saved, the tournament appears in the database with an active status. It becomes immediately visible through `GET /api/cliente/torneos`.
+  </Step>
+  <Step title="Manage as it progresses">
+    Update the tournament record as rounds are played. Change status, add results, or deactivate when the tournament concludes.
+  </Step>
+</Steps>
+
+## Public tournament endpoint
+
+The public endpoint returns all tournaments in an active state:
+
+```http
+GET /api/cliente/torneos
+```
+
+Example response:
+
+```json
+[
+  {
+    "id_torneo": 3,
+    "nombre": "Copa Primavera 2026",
+    "deporte": "Pádel",
+    "sede": "Principal",
+    "fecha_inicio": "2026-04-05",
+    "descripcion": "Torneo de pádel amateur, categoría mixta"
+  }
+]
+```
+
+This endpoint requires no authentication — it is intended for display on the public booking portal so customers can see upcoming events.
+
+## Database schema
+
+Tournaments are stored in the `torneos` table. Key columns:
+
+| Column | Type | Description |
+|---|---|---|
+| `id_torneo` | integer | Primary key |
+| `nombre` | text | Tournament name |
+| `id_deporte` | integer | FK to `deportes` |
+| `id_sede` | integer | FK to `sedes` |
+| `fecha_inicio` | date | Start date |
+| `descripcion` | text | Optional description or rules |
+| `activo` | boolean | Controls public visibility |
+
+## Access control
+
+<Note>
+  Superadmin users can manage tournaments at any location. Location managers and staff are limited to tournaments at their assigned `id_sede`.
+</Note>
+
+The `scopeMiddleware.js` enforces this — if your JWT's `id_sede` does not match the tournament's sede, the request is rejected with a 403.

@@ -1,0 +1,164 @@
+---
+title: "Database configuration"
+description: "How to provision a Neon PostgreSQL database, configure the connection pool, and initialize the TANCAT schema."
+---
+
+TANCAT System uses [Neon](https://neon.tech) as its PostgreSQL provider. Neon is a serverless Postgres platform that scales to zero when idle, which makes it well suited for a system like TANCAT that has predictable business hours.
+
+## Setting up Neon
+
+<Steps>
+  <Step title="Create a Neon account">
+    Go to [console.neon.tech](https://console.neon.tech) and sign up. The free tier provides one project with 512 MB of storage, which is more than enough for development and a small production deployment.
+  </Step>
+
+  <Step title="Create a project">
+    Click **New project** and choose:
+
+    - **Name**: `tancat-system` (or any name you prefer)
+    - **PostgreSQL version**: 16
+    - **Region**: Choose the region closest to your users. For Córdoba, Argentina, `South America (São Paulo)` minimises latency.
+
+    Neon creates a default database called `neondb` and a default branch called `main`.
+  </Step>
+
+  <Step title="Copy the connection string">
+    After the project is created:
+
+    1. Click **Connection Details** in the left sidebar.
+    2. Select **Connection string** from the format dropdown.
+    3. Copy the full string — it looks like:
+
+    ```
+    postgresql://user:password@ep-quiet-brook-123456.sa-east-1.aws.neon.tech/neondb?sslmode=require
+    ```
+
+    4. Paste this value as `DATABASE_URL` in `backend/.env`.
+
+    <Warning>
+      The connection string contains your database password. Do not share it or commit it to version control.
+    </Warning>
+  </Step>
+
+  <Step title="Initialize the schema">
+    With `DATABASE_URL` set in `backend/.env`, run:
+
+    ```bash
+    npm run db:setup
+    ```
+
+    This command runs `npm run db:migrate` followed by `npm run db:seed`.
+
+    - **Migrate** creates all tables, indices, and constraints.
+    - **Seed** inserts the three sede (location) records, default sports, initial time slots, and a default admin user.
+
+    <Note>
+      Run `db:setup` only once against a fresh database. To apply incremental schema changes later, use `npm run db:migrate` alone.
+    </Note>
+  </Step>
+</Steps>
+
+## Connection pool
+
+The connection pool is configured in `backend/config/database.js`. Key settings:
+
+| Setting | Value | Notes |
+|---|---|---|
+| Max connections | 20 | Matches Neon's free-tier connection limit |
+| SSL | Required | `sslmode=require` enforced on every connection |
+| Idle timeout | Default | Connections are returned to the pool after each query |
+
+Neon's serverless driver handles connection multiplexing on its side. The pool max of 20 is a safe ceiling that prevents exhausting Neon's connection limit while allowing concurrent requests during peak booking periods.
+
+<Warning>
+  Do not raise the pool maximum above 20 without upgrading your Neon plan. Exceeding the connection limit causes new queries to fail with a `too many clients` error.
+</Warning>
+
+### SSL requirement
+
+All connections to Neon require SSL. The `sslmode=require` parameter in `DATABASE_URL` enforces this. If you omit it, the connection will be refused.
+
+The pool configuration also sets `ssl: { rejectUnauthorized: false }` to trust Neon's managed certificate, which uses a certificate authority not in the default Node.js trust store.
+
+## Checking connectivity
+
+After starting the server, verify the database connection with the health check endpoint:
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+A healthy response:
+
+```json
+{
+  "status": "ok",
+  "database": "connected",
+  "timestamp": "2026-03-19T12:00:00.000Z"
+}
+```
+
+If `database` shows `disconnected`, check:
+
+1. `DATABASE_URL` is correctly set in `backend/.env`.
+2. The URL includes `?sslmode=require`.
+3. Your IP is not blocked by a Neon IP allowlist (if you configured one).
+4. The Neon project is not suspended (free tier projects suspend after a period of inactivity).
+
+## Key tables
+
+The schema has three logical groups: location data, bookings, and commerce.
+
+### Location and scheduling
+
+| Table | Description |
+|---|---|
+| `sedes` | The three TANCAT locations in Córdoba |
+| `deportes` | Sports available at each sede (e.g., padel, tenis, fútbol) |
+| `canchas` | Individual courts, linked to a sede and a deporte |
+| `turnos` | Time slots available for booking on each cancha |
+
+### People
+
+| Table | Description |
+|---|---|
+| `clientes` | Registered clients who make reservations |
+| `empleados` | Staff members with role-based access to the admin panel |
+
+### Bookings and tournaments
+
+| Table | Description |
+|---|---|
+| `reservas` | Bookings linking a client, a cancha, and a turno |
+| `torneos` | Tournament definitions, brackets, and scheduling |
+
+### Commerce and inventory
+
+| Table | Description |
+|---|---|
+| `productos` | Inventory items sold or consumed at each location |
+| `proveedores` | Suppliers from whom products are purchased |
+| `compras` | Purchase orders from suppliers |
+| `ventas` | Point-of-sale sales records |
+
+<Tip>
+  Each location (sede) has its own inventory routes in the backend (`inventario`, `inventarioJacintoRios`, `inventarioRincon`), but all data lives in the same `productos` table, filtered by `sede_id`.
+</Tip>
+
+## Running migrations
+
+To apply schema changes to an existing database without reseeding:
+
+```bash
+npm run db:migrate
+```
+
+To reseed reference data (locations, sports, default slots) without re-running migrations:
+
+```bash
+npm run db:seed
+```
+
+<Warning>
+  Running `db:seed` on a database that already has data may create duplicate records depending on how the seed scripts are written. Review the scripts in the `backend/` directory before running on a production database.
+</Warning>

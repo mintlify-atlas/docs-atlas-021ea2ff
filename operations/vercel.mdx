@@ -1,0 +1,127 @@
+---
+title: "Vercel deployment"
+description: "Deploy TANCAT System to Vercel with the Express backend proxied through API routes and the Vite-built frontend served as a static site."
+---
+
+TANCAT System is designed to deploy on Vercel as a single project: the Express backend runs as serverless functions behind `/api/*` routes, and the Vite-built frontend is served as a static site from the `dist` directory.
+
+<Note>
+  The recommended Vercel region for TANCAT is **São Paulo (`gru1`)**, which provides the lowest latency for users in Argentina and the rest of South America.
+</Note>
+
+## How routing works
+
+The `vercel.json` configuration splits incoming traffic between the backend and frontend:
+
+- Requests to `/api/*` are proxied to the Express server running on `localhost:3000`.
+- All other requests are served from the Vite build output (`frontend/dist`).
+
+This means you get a single Vercel deployment URL that handles both the REST API and the frontend app with no separate service or subdomain required.
+
+## Deployment guide
+
+<Steps>
+  <Step title="Fork or clone the repository">
+    Make sure your TANCAT System source code is in a GitHub repository that Vercel can access. Vercel requires a connected Git provider to deploy.
+  </Step>
+
+  <Step title="Create a new Vercel project">
+    Go to [vercel.com](https://vercel.com) and click **Add New Project**. Select the GitHub repository containing your TANCAT System code.
+  </Step>
+
+  <Step title="Configure the build settings">
+    Vercel detects the project automatically, but verify these settings before deploying:
+
+    | Setting | Value |
+    |---|---|
+    | Framework preset | Other |
+    | Build command | `cd frontend && npm install && npm start` |
+    | Output directory | `frontend/dist` |
+    | Install command | `npm install` |
+
+    <Tip>
+      The build command runs inside the `frontend` directory, which installs dependencies and triggers the Vite production build.
+    </Tip>
+  </Step>
+
+  <Step title="Set environment variables">
+    Before deploying, add all required environment variables in the Vercel dashboard under **Settings → Environment Variables**.
+
+    At minimum, you must set:
+
+    ```env
+    DATABASE_URL=postgresql://usuario:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+    NODE_ENV=production
+    JWT_SECRET=your-long-random-secret-here
+    JWT_EXPIRES_IN=8h
+    CORS_ORIGIN=https://yourdomain.com,https://yourapp.vercel.app
+    ```
+
+    <Warning>
+      Never commit environment variables to your repository. Always set them through the Vercel dashboard.
+    </Warning>
+
+    Vercel automatically sets `VERCEL_URL` to your deployment's URL (e.g., `your-project.vercel.app`). The backend reads this variable and adds it to the allowed CORS origins automatically — you do not need to add it manually to `CORS_ORIGIN`.
+  </Step>
+
+  <Step title="Select the São Paulo region">
+    In your project settings, go to **Settings → Functions** and set the region to **South America (São Paulo) — gru1**.
+
+    This places the serverless functions geographically close to the Neon PostgreSQL database connection and your end users in Argentina, reducing round-trip latency.
+  </Step>
+
+  <Step title="Deploy">
+    Click **Deploy**. Vercel runs the frontend build and makes your project live. The first deploy may take 2–3 minutes.
+
+    Once the build completes, Vercel gives you a deployment URL in the format `https://your-project.vercel.app`.
+  </Step>
+
+  <Step title="Configure a custom domain (optional)">
+    Go to **Settings → Domains** in your Vercel project and add your custom domain. Vercel automatically provisions an SSL certificate via Let's Encrypt.
+
+    After adding your domain, update the `CORS_ORIGIN` environment variable to include it:
+
+    ```env
+    CORS_ORIGIN=https://yourdomain.com,https://yourapp.vercel.app
+    ```
+
+    Redeploy after changing environment variables for them to take effect.
+  </Step>
+
+  <Step title="Create the first admin user">
+    After a successful deployment, run the admin bootstrap script from your local machine, pointing at the production database:
+
+    ```bash
+    DATABASE_URL="your-production-neon-url" node backend/primerAdmin.js
+    ```
+
+    This creates the initial superadmin employee account that you use to access the admin panel. You can also run this command directly in the Vercel dashboard under **Settings → Functions → Console** if available.
+
+    <Warning>
+      Run this script exactly once. Running it again on a database that already has an admin account may cause errors or duplicate records.
+    </Warning>
+  </Step>
+</Steps>
+
+## Verifying the deployment
+
+After deploying, check that the backend is responding correctly:
+
+```bash
+curl https://your-project.vercel.app/api/health
+```
+
+A healthy response looks like:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-03-19T00:00:00.000Z"
+}
+```
+
+If the health check fails, review your environment variables and check the Vercel function logs under **Deployments → [latest] → Functions**.
+
+## Redeployments
+
+Every push to your connected Git branch triggers an automatic redeployment. To redeploy without a code change (for example, after updating an environment variable), go to **Deployments** and click **Redeploy** on the latest deployment.

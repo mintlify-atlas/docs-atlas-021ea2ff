@@ -1,0 +1,117 @@
+---
+title: 'Inventario'
+description: 'Retrieve product stock levels for each TANCAT location.'
+---
+
+The inventory API provides separate endpoints for each physical location. All three require authentication.
+
+<Note>Requires a valid JWT Bearer token in the Authorization header.</Note>
+
+---
+
+## GET /api/inventario
+
+Returns the product inventory for the main (Sede Principal) location, including stock levels for all products.
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/inventario \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Response
+
+**200 OK**
+
+<ResponseField name="success" type="boolean" required>
+  Always `true` on success.
+</ResponseField>
+
+<ResponseField name="data" type="array" required>
+  Array of product objects with current stock levels for the main location.
+
+  <Expandable title="product properties">
+    <ResponseField name="id_producto" type="number" required>
+      Unique product identifier.
+    </ResponseField>
+    <ResponseField name="nombre" type="string" required>
+      Product name.
+    </ResponseField>
+    <ResponseField name="stock" type="number" required>
+      Current stock quantity.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id_producto": 1,
+      "nombre": "Pelota de Pádel",
+      "stock": 24
+    },
+    {
+      "id_producto": 2,
+      "nombre": "Red de Tenis",
+      "stock": 3
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/inventario/rincon
+
+Returns the product inventory for the Rincón location.
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/inventario/rincon \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Response
+
+Same structure as [GET /api/inventario](#get-apiinventario), filtered to the Rincón location's stock.
+
+---
+
+## GET /api/inventario/JacintoRios
+
+Returns the product inventory for the Jacinto Ríos location.
+
+### Request
+
+No parameters or request body required.
+
+```bash
+curl --request GET \
+  --url https://your-domain.com/api/inventario/JacintoRios \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+```
+
+### Response
+
+Same structure as [GET /api/inventario](#get-apiinventario), filtered to the Jacinto Ríos location's stock.
+
+---
+
+### Error responses (all inventory endpoints)
+
+| Status | Condition |
+|---|---|
+| `401 Unauthorized` | Missing, expired, or invalid Bearer token. |
+| `500 Internal Server Error` | Database query failed (`DATABASE_ERROR`). |

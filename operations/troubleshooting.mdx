@@ -1,0 +1,233 @@
+---
+title: "Troubleshooting"
+description: "Diagnose and fix the most common issues encountered when running or deploying TANCAT System."
+---
+
+Use the sections below to diagnose common issues. Start with the health check endpoint to confirm whether the backend is reachable before investigating further:
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+A successful response returns HTTP `200` with a JSON body. Any other response indicates a backend problem.
+
+<AccordionGroup>
+  <Accordion title="Backend won't start" icon="triangle-exclamation">
+    If `npm run dev` or `node backend/server.js` exits immediately or throws an error, work through these checks in order:
+
+    **1. Check that `.env` exists and has all required variables.**
+
+    The backend exits on startup if `DATABASE_URL`, `JWT_SECRET`, or `NODE_ENV` are missing. Confirm the file is in the project root (not inside `backend/`):
+
+    ```bash
+    ls -la .env
+    ```
+
+    **2. Reinstall dependencies.**
+
+    A missing or corrupted `node_modules` directory causes import errors:
+
+    ```bash
+    npm install
+    ```
+
+    **3. Verify database connectivity.**
+
+    Confirm the `DATABASE_URL` in your `.env` is correct and that your Neon project is active. A quick check:
+
+    ```bash
+    psql "$DATABASE_URL" -c "SELECT 1;"
+    ```
+
+    If this fails, the connection string is wrong or Neon is unreachable. Check the Neon dashboard for project status.
+  </Accordion>
+
+  <Accordion title="Frontend can't connect to the backend" icon="plug">
+    If the frontend loads but API calls fail, the browser console will show network errors.
+
+    **1. Confirm the backend is running on port 3000.**
+
+    ```bash
+    curl http://localhost:3000/api/health
+    ```
+
+    If this fails, the backend is not running. Start it and check for startup errors.
+
+    **2. Check the CORS configuration.**
+
+    The frontend's origin must be in `CORS_ORIGIN`. For local development:
+
+    ```env
+    CORS_ORIGIN=http://localhost:5173
+    ```
+
+    The Vite dev server runs on port `5173` by default. If you changed it, update `CORS_ORIGIN` to match.
+
+    **3. Use the browser debug utility.**
+
+    Open the browser console and run:
+
+    ```javascript
+    TANCAT_DEBUG.getConnectionStatus()
+    ```
+
+    This returns the current connection state and the API base URL the frontend is using.
+  </Accordion>
+
+  <Accordion title="Database connection errors" icon="database">
+    Errors like `ECONNREFUSED`, `SSL connection required`, or `database does not exist` point to a misconfigured `DATABASE_URL`.
+
+    **1. Verify the URL format.**
+
+    The URL must follow this exact format:
+
+    ```
+    postgresql://usuario:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+    ```
+
+    Common mistakes:
+    - Missing `?sslmode=require` at the end
+    - Using `postgres://` instead of `postgresql://`
+    - Incorrect password (copy from the Neon dashboard, don't retype it)
+
+    **2. Check that migrations have been run.**
+
+    If the backend starts but returns `relation does not exist` errors, the schema has not been applied:
+
+    ```bash
+    npm run db:migrate
+    ```
+
+    **3. Verify the Neon project is active.**
+
+    Neon free-tier projects suspend after a period of inactivity. Open the Neon dashboard and confirm the project status is **Active**. Sending any query will wake it from suspension.
+  </Accordion>
+
+  <Accordion title="Port already in use" icon="network-wired">
+    If you see `EADDRINUSE: address already in use :::3000` or the same error for port `5173`, another process is holding the port.
+
+    **Kill the process on port 3000 (backend):**
+
+    ```bash
+    lsof -ti:3000 | xargs kill -9
+    ```
+
+    **Kill the process on port 5173 (Vite dev server):**
+
+    ```bash
+    lsof -ti:5173 | xargs kill -9
+    ```
+
+    Then restart the server. If the problem recurs, a previous instance of the server may be running as a background process. Check with:
+
+    ```bash
+    lsof -i:3000
+    lsof -i:5173
+    ```
+  </Accordion>
+
+  <Accordion title="CORS errors in production" icon="shield-halved">
+    Browser errors like `Access to fetch at '...' from origin '...' has been blocked by CORS policy` mean the frontend's origin is not in the backend's allowed origins list.
+
+    **1. Add the production URL to `CORS_ORIGIN`.**
+
+    In the Vercel dashboard, update the `CORS_ORIGIN` environment variable to include all origins that need API access:
+
+    ```env
+    CORS_ORIGIN=https://yourdomain.com,https://yourapp.vercel.app
+    ```
+
+    **2. Redeploy after updating environment variables.**
+
+    Environment variable changes in Vercel do not take effect until you redeploy. Trigger a redeploy from the **Deployments** tab.
+
+    **3. Check automatic Vercel URL allowlisting.**
+
+    The backend automatically adds `https://$VERCEL_URL` and `https://*.vercel.app` to allowed origins when running on Vercel. If your deployment URL ends in `.vercel.app`, it should be allowed automatically. If you are using a custom domain, you must add it manually to `CORS_ORIGIN`.
+  </Accordion>
+
+  <Accordion title="Auth and login failures" icon="lock">
+    If login requests return `401 Unauthorized` or `403 Forbidden`, the cause is usually one of the following:
+
+    **`JWT_SECRET` is not set or has changed.**
+
+    All tokens signed with a different secret are invalid. If you rotated `JWT_SECRET`, all users must log in again. Confirm the variable is set:
+
+    ```bash
+    echo $JWT_SECRET
+    ```
+
+    In production, verify it is present in the Vercel environment variables.
+
+    **The employee account is inactive.**
+
+    The `empleados` table has an `activo` boolean column. If it is `false`, the account cannot log in even with correct credentials. Reactivate the account through the admin panel under **Employees**, or directly in the database:
+
+    ```sql
+    UPDATE empleados SET activo = true WHERE id = <employee_id>;
+    ```
+
+    **No admin account exists.**
+
+    If this is a fresh database and you have not run the bootstrap script:
+
+    ```bash
+    node backend/primerAdmin.js
+    ```
+  </Accordion>
+
+  <Accordion title="Rate limit errors (HTTP 429)" icon="gauge-high">
+    If clients receive `429 Too Many Requests` responses, they have exceeded the configured request rate.
+
+    **Check the current rate limit settings:**
+
+    ```env
+    RATE_LIMIT_WINDOW_MS=900000   # 15-minute window
+    RATE_LIMIT_MAX_REQUESTS=100   # 100 requests per window
+    ```
+
+    **For legitimate high-traffic scenarios**, raise `RATE_LIMIT_MAX_REQUESTS` in your environment variables and redeploy.
+
+    **For development**, you can temporarily increase the limit to avoid hitting it during testing:
+
+    ```env
+    RATE_LIMIT_MAX_REQUESTS=1000
+    RATE_LIMIT_WINDOW_MS=60000
+    ```
+
+    The `429` response includes a `Retry-After` header indicating when the client may retry. Well-behaved API clients should respect this header.
+  </Accordion>
+
+  <Accordion title="Enabling debug logging" icon="bug">
+    When you need more visibility into what the backend is doing, enable additional logging.
+
+    **Server-side SQL query logging:**
+
+    Add this to your `.env` (or Vercel environment variables):
+
+    ```env
+    LOG_SQL_QUERIES=true
+    LOG_LEVEL=debug
+    ```
+
+    With `LOG_SQL_QUERIES=true`, every database query is printed to the server console with its execution time. This is useful for identifying slow queries or confirming that the correct queries are being issued.
+
+    <Warning>
+      Disable `LOG_SQL_QUERIES` in production before handling real user data. Query logs can contain sensitive values like email addresses and reservation details.
+    </Warning>
+
+    **Browser-side connection diagnostics:**
+
+    Open the browser developer console on any page of the TANCAT frontend and run:
+
+    ```javascript
+    TANCAT_DEBUG.getConnectionStatus()
+    ```
+
+    This returns an object with the current API base URL, connection state, and the last response status — useful for confirming whether the frontend is pointing at the correct backend URL.
+
+    **Vercel function logs:**
+
+    In production on Vercel, go to **Deployments → [latest deployment] → Functions** to see real-time log output from the Express serverless functions.
+  </Accordion>
+</AccordionGroup>

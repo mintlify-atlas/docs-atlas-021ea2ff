@@ -1,0 +1,112 @@
+{
+  "projectType": "saas",
+  "projectName": "TANCAT System",
+  "projectDescription": "A full-stack sports complex administration platform for Complejo Deportivo TANCAT in Córdoba, Argentina, providing public court booking and comprehensive admin management of reservations, inventory, sales, tournaments, and employees across multiple locations.",
+  "theme": "linden",
+  "primaryColor": "#1c1c1c",
+  "lightColor": "#5faac1",
+  "darkColor": "#bae2e7",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Overview",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "architecture"]
+          },
+          {
+            "group": "Configuration",
+            "pages": ["configuration/environment", "configuration/database", "configuration/deployment"]
+          }
+        ]
+      },
+      {
+        "tab": "Features",
+        "groups": [
+          {
+            "group": "Public Portal",
+            "pages": ["features/court-booking", "features/tournaments", "features/locations"]
+          },
+          {
+            "group": "Admin Panel",
+            "pages": ["features/dashboard", "features/reservations", "features/inventory", "features/sales", "features/employees", "features/reports"]
+          },
+          {
+            "group": "Security",
+            "pages": ["features/authentication", "features/roles-permissions"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": ["api/auth/login", "api/auth/logout", "api/auth/verify"]
+          },
+          {
+            "group": "Public Endpoints",
+            "pages": ["api/cliente/sedes", "api/cliente/deportes", "api/cliente/disponibilidad", "api/cliente/torneos"]
+          },
+          {
+            "group": "Admin Endpoints",
+            "pages": ["api/admin/dashboard", "api/admin/reservas", "api/admin/inventario", "api/admin/ventas", "api/admin/torneos", "api/admin/reportes"]
+          },
+          {
+            "group": "Other",
+            "pages": ["api/health", "api/overview"]
+          }
+        ]
+      },
+      {
+        "tab": "Operations",
+        "groups": [
+          {
+            "group": "Deployment",
+            "pages": ["operations/vercel", "operations/environment-variables"]
+          },
+          {
+            "group": "Maintenance",
+            "pages": ["operations/database-migrations", "operations/troubleshooting"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Public court availability booking system with real-time slot checking",
+    "Multi-location inventory management (Main, Jacinto Ríos, Rincón)",
+    "JWT-based authentication with role-based access control and scopes",
+    "Admin dashboard with sales, reservations, and activity statistics",
+    "Tournament management with public visibility and admin control",
+    "Employee management with per-location access restrictions",
+    "Automatic reservation expiration service",
+    "Neon PostgreSQL (serverless) integration with connection pooling",
+    "Vercel deployment with Express backend and Vite frontend",
+    "Rate limiting, CORS, Helmet security middleware"
+  ],
+  "publicApiSurface": [
+    "GET /api/cliente/sedes",
+    "GET /api/cliente/deportes",
+    "GET /api/cliente/combinaciones-disponibles",
+    "POST /api/cliente/consulta-disponibilidad",
+    "GET /api/cliente/torneos",
+    "POST /api/auth/login",
+    "POST /api/auth/logout",
+    "GET /api/auth/verify",
+    "GET /api/admin/dashboard",
+    "GET /api/reservas",
+    "POST /api/reservas",
+    "GET /api/torneos",
+    "GET /api/inventario",
+    "GET /api/inventario/rincon",
+    "GET /api/inventario/JacintoRios",
+    "GET /api/ventas",
+    "GET /api/reportes",
+    "GET /api/empleados",
+    "GET /api/proveedores",
+    "GET /api/compras",
+    "GET /api/health"
+  ]
+}
